@@ -1,0 +1,598 @@
+<!doctype html>
+<html lang="en" data-lavish-annotate="on">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>video-gen · s00 · MiniMax H3 plan</title>
+<link rel="stylesheet" href="house.css">
+<link rel="stylesheet" href="project.css">
+<style>
+  /* layout helpers only: every colour is a house token */
+  th{ white-space:nowrap; }
+  td code, li code, p code, dd code{ overflow-wrap:anywhere; }
+  td, th{ vertical-align:top; }
+  .kv dd code{ white-space:normal; }
+  .stack{ display:grid; gap:var(--s4); }
+  .qa{ display:grid; gap:var(--s3); grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); }
+  .qa .card{ min-width:0; }
+  .qa .card h3{ font-family:var(--serif); font-weight:400; font-size:var(--t1); }
+  .q{ font-family:var(--serif); font-style:italic; color:var(--ink); }
+  .cite{ font-family:var(--mono); font-size:var(--t-2); color:var(--muted); }
+  svg text{ font-family:var(--sans); font-size:12px; fill:currentColor; }
+  svg .mono{ font-family:var(--mono); font-size:11px; }
+  svg .box{ fill:var(--panel); stroke:var(--line-2); }
+  svg .core{ fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.5; }
+  svg .wash{ fill:var(--accent-wash); stroke:var(--line-2); }
+  svg .edge{ stroke:var(--muted); fill:none; stroke-width:1.2; marker-end:url(#arr); }
+  svg .muted{ fill:var(--muted); }
+  svg .dash{ stroke-dasharray:4 3; }
+  pre{ overflow-x:auto; white-space:pre-wrap; overflow-wrap:anywhere; }
+  .arms td:first-child{ white-space:nowrap; font-weight:600; }
+  .rubric td:first-child{ min-width:14ch; }
+  form.q-form{ margin:0; }
+  form.q-form label{ display:block; padding:var(--s1) 0; }
+  form.q-form textarea, form.q-form input[type=text]{ width:100%; box-sizing:border-box; font:inherit; font-size:var(--t-1); padding:var(--s1) var(--s2); border:1px solid var(--line-2); border-radius:4px; background:var(--bg); color:var(--ink); }
+  form.q-form .row{ display:flex; gap:var(--s3); align-items:center; flex-wrap:wrap; margin-top:var(--s2); }
+  .copyrow{ margin-top:var(--s4); display:flex; gap:var(--s3); align-items:center; flex-wrap:wrap; }
+  .copyrow textarea{ flex-basis:100%; }
+  .ms td:first-child{ white-space:nowrap; font-weight:600; }
+  .src li{ margin-bottom:var(--s1); overflow-wrap:anywhere; }
+  @media (max-width:560px){
+    .arms td:first-child, .ms td:first-child{ white-space:normal; }
+  }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <span class="eyebrow">video-gen · plan s00 · 29 Oct 2026 · branch <code>video-gen-spike</code> · nothing committed yet</span>
+  <h1>MiniMax H3 from zero: <em>one harness, four techniques, your first clip this week</em></h1>
+  <p class="lede">You asked what MiniMax H3 is, whether people run it in ComfyUI, whether you need to rent a GPU, and how to make videos that remember a character over time. This page answers those from the transcripts in <code>transcript-rag-agent</code> (three H3 videos plus nine on neighbouring tools), the official model card, the ComfyUI docs, and fal and Modal docs. It then lays out the project: a small, reproducible generation harness, a bake-off of four H3 techniques on one fixed brief, and a character LoRA so the same character survives across many clips. The first test costs nothing and can run today.</p>
+  <div class="verdict">
+    <div class="stat"><div class="n">33B</div><div class="l">open-weight model that generates video <b>and</b> its audio: 4–15 s, 24 fps, 768 px short edge, dialogue spoken in the clip (model card)</div></div>
+    <div class="stat accent"><div class="n">$0</div><div class="l">for the first clips: AIQuest's Kaggle notebook on two free T4s renders a 5 s clip at 480p in about 3 minutes with a 4-step LoRA (rEjasJZq1t8 17:45)</div></div>
+    <div class="stat"><div class="n">4 + 1</div><div class="l">techniques in the bake-off plus one hosted reference arm; about 50 clips, roughly $5–15 on Modal (estimate, inside the $30 monthly credit)</div></div>
+    <div class="stat amber"><div class="n">Licence</div><div class="l">H3's community licence excludes the US, EU, UK and South Korea, and reportedly covers outputs too. Confirm where you stand before anything else (decision Q1)</div></div>
+  </div>
+</header>
+
+<section id="answers">
+  <span class="eyebrow">Your four questions, answered first</span>
+  <h2>The short version</h2>
+  <div class="qa">
+    <div class="card">
+      <h3>Is it ComfyUI?</h3>
+      <p>Mostly, yes. MiniMax H3 has official ComfyUI templates (text-to-video, image-to-video, reference-to-video, multiframe reference, ControlNet) from ComfyUI 0.30 on, and every creator in the transcripts drives it either through ComfyUI or through a hand-rolled Gradio notebook on Kaggle. ComfyUI is the <i>runtime</i>, though, not the harness: you drive it from code through its API-format workflow JSON, so every run is a record, not a click.</p>
+    </div>
+    <div class="card">
+      <h3>Do I need to rent a GPU?</h3>
+      <p>Yes. H3 is a 33-billion-parameter model; your Mac (M1 Pro, 32 GB, no CUDA) cannot run it. You have three rentals to hand: Kaggle's free dual T4 (the notebook already exists), Modal (your CLI is logged in; L40S $1.95/h, H100 $3.95/h, $30 free a month), and fal (hosted H3 endpoints and H3 LoRA trainers, pay per clip or per training step). The Mac stays for the harness code, the judging and the review pages.</p>
+    </div>
+    <div class="card">
+      <h3>How are people using MiniMax?</h3>
+      <p>Three ways. (1) Hosted: the H3 Max API on fal or MiniMax's platform, no setup, commercial rights included. (2) Open weights in ComfyUI: pruned INT8 builds plus 4- or 8-step turbo LoRAs so a 16–24 GB card can play. (3) Community layers on top: fine-tuned checkpoints (Singularity), adapters (SolarRenderer, Fun ControlNet Union) and custom LoRAs trained on their own clips.</p>
+    </div>
+    <div class="card">
+      <h3>How do the videos remember?</h3>
+      <p>Three layers, cheapest first. Per shot: reference-to-video takes up to 9 images, 3 videos and 3 audio clips of your character. Per project: a LoRA trained on 50–200 clips of that character, loaded into every generation. Across shots: multi-shot prompts inside one 15 s clip, last-frame-to-first-frame chaining, and (today only for Wan 2.2, not H3) StoryMem-style memory banks. Section 4 has the diagram.</p>
+    </div>
+  </div>
+</section>
+
+<section id="what">
+  <span class="eyebrow">1 · What MiniMax H3 is</span>
+  <h2>A video-and-audio model, released as weights, with a hosted top tier kept back</h2>
+  <p class="sub">From the model card (<code>MiniMaxAI/MiniMax-H3</code>) and the ComfyUI tutorial, cross-checked against the three transcripts. Nothing here is from memory: the model is newer than my training data.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 780 250" width="100%" role="img" aria-labelledby="f1t">
+      <title id="f1t">Inputs, the H3 backbone with its adapters, the output clip, and the post-processing pass</title>
+      <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+      <g id="f1-inputs">
+        <text x="10" y="18" class="mono muted">INPUTS (any mode)</text>
+        <rect class="box" x="10" y="28" width="170" height="40" rx="6"/><text x="20" y="45">Structured text prompt</text><text x="20" y="60" class="mono muted">shots · dialogue · soundscape</text>
+        <rect class="box" x="10" y="76" width="170" height="40" rx="6"/><text x="20" y="93">First / last frame</text><text x="20" y="108" class="mono muted">fl2va · 0, 1 or 2 images</text>
+        <rect class="box" x="10" y="124" width="170" height="40" rx="6"/><text x="20" y="141">References</text><text x="20" y="156" class="mono muted">ref2va · ≤9 img · 3 video · 3 audio</text>
+        <rect class="box" x="10" y="172" width="170" height="40" rx="6"/><text x="20" y="189">Structure</text><text x="20" y="204" class="mono muted">pose · depth · mesh · skeleton</text>
+      </g>
+      <path class="edge" d="M180 48 H228"/><path class="edge" d="M180 96 H228"/><path class="edge" d="M180 144 H228"/><path class="edge dash" d="M180 192 H228"/>
+      <g id="f1-core">
+        <rect class="core" x="230" y="28" width="230" height="184" rx="8"/>
+        <text x="245" y="50" font-weight="600">MiniMax H3</text><text x="345" y="50" class="mono muted">33B single-stream DiT</text>
+        <rect class="box" x="245" y="62" width="200" height="26" rx="4"/><text x="253" y="79" class="mono">Qwen3-VL-32B text encoder</text>
+        <rect class="box" x="245" y="94" width="96" height="26" rx="4"/><text x="253" y="111" class="mono">video VAE f16t4</text>
+        <rect class="box" x="349" y="94" width="96" height="26" rx="4"/><text x="357" y="111" class="mono">audio VAE 32 kHz</text>
+        <text x="245" y="143" class="mono muted">LOADED ON TOP, PER RUN</text>
+        <rect class="wash" x="245" y="150" width="200" height="22" rx="4"/><text x="253" y="165" class="mono">turbo LoRA · 4 or 8 steps</text>
+        <rect class="wash" x="245" y="176" width="200" height="22" rx="4"/><text x="253" y="191" class="mono">your character / style LoRA</text>
+        <text x="245" y="208" class="mono muted">+ SolarRenderer / ControlNet adapters</text>
+      </g>
+      <path class="edge" d="M460 120 H518"/>
+      <g id="f1-out">
+        <rect class="box" x="520" y="76" width="120" height="88" rx="6"/>
+        <text x="530" y="96" font-weight="600">One MP4</text>
+        <text x="530" y="114" class="mono muted">4–15 s · 24 fps</text>
+        <text x="530" y="129" class="mono muted">768 px short edge</text>
+        <text x="530" y="144" class="mono muted">stereo audio + speech</text>
+      </g>
+      <path class="edge dash" d="M640 120 H688"/>
+      <g id="f1-post">
+        <rect class="box" x="690" y="76" width="82" height="88" rx="6"/>
+        <text x="700" y="96" font-weight="600">Post</text>
+        <text x="700" y="114" class="mono muted">FlashVSR+</text>
+        <text x="700" y="129" class="mono muted">SeedVR2</text>
+        <text x="700" y="144" class="mono muted">→ 1080p / 4K</text>
+      </g>
+      <text x="230" y="238" class="mono muted">2K output (H3-Regenerate-2K) and the Context-IR prompt pre-processor were not released: local 2K is an upscale pass.</text>
+    </svg>
+    <figcaption>Every mode shares one backbone. The things you will vary in the bake-off are the LoRAs loaded on top, the checkpoint (base or a community fine-tune), and the references you feed in. Dashed arrows are optional.</figcaption>
+  </figure>
+  <div class="split">
+    <dl class="kv">
+      <dt>maker</dt><dd>MiniMax (the Hailuo video family). Open weights since the H3 release; the licence is theirs, not Apache.</dd>
+      <dt>backbone</dt><dd>H3-Omni-Transformer, "33B-parameter dense, single-stream Transformer"; text from Qwen3-VL-32B hidden states (layer 50); visual VAE 16× spatial, 4× temporal; audio VAE at 32 kHz.</dd>
+      <dt>output</dt><dd>4–15 s, 24 fps, short edge 768 px (1344×768 at 16:9; sides in multiples of 32), stereo audio with dialogue, SFX and music generated in the same pass.</dd>
+      <dt>modes</dt><dd><code>t2va</code> text; <code>fl2va</code> first and/or last frame; <code>ref2va</code> up to 9 images, 3 video clips and 3 audio clips (each 2–15 s), 12 files total. Fun ControlNet Union adds Canny, Depth, HED, MLSD, Pose and masked inpainting.</dd>
+      <dt>frames</dt><dd>Length is a frame count on a <code>17k+5</code> grid: 124 frames ≈ 5.2 s (default), 192 ≈ 8 s, 345 ≈ 14.4 s.</dd>
+      <dt>steps</dt><dd>Base: 20 steps, "about 25 for motion quality". Turbo: 8 steps with the official fl2v LoRA, 4 with the official ref2v LoRA. <code>cfg</code> 1, no negative prompt.</dd>
+    </dl>
+    <dl class="kv">
+      <dt>ComfyUI files</dt><dd><code>Comfy-Org/MiniMax-H3</code>: <code>minimax_h3_fl2va_pruned_int8_convrot</code> and <code>…ref2va_pruned_int8_convrot</code> (diffusion_models), <code>qwen3vl_32b_minimax_h3_nvfp4_awq</code> (text_encoders), video VAE int8 + audio VAE fp32 (vae), turbo LoRAs <code>fl2v_turbo_8step_v1.0</code> and <code>ref2v_turbo_4step_v0.1</code> (loras), <code>fun_controlnet_union_2.0</code> (model_patches). ComfyUI ≥ 0.30; ≥ 0.38 for ControlNet Union 2.0.</dd>
+      <dt>VRAM</dt><dd>No official number. Smallest INT8 build is ~16 GB on disk, the default pruned build 21 GB, full BF16 66 GB. One RTX 5090 benchmark measured ~32 GB peak even with pruned files. Kaggle's two T4s hold 9.3 GB of transformer each (~10 GB in use) with 22 GB system RAM. Singularity V2's card says ~14 GB. An 8 GB path (FreeVideo plugin) is claimed, unverified.</dd>
+      <dt>held back</dt><dd>H3-Context-IR (hosted prompt pre-processing, "strongly recommended" by the card) and H3-Regenerate-2K. Sparse attention came later as a ComfyUI feature (0.35+).</dd>
+      <dt>licence</dt><dd>"MiniMax H3 Community License Agreement". Application form "only for USA/EU/UK/South Korea" at <code>platform.minimax.io/h3-license</code>. Secondary write-ups: the exclusion covers outputs; elsewhere commercial use is free with attribution below US$20M revenue. Comfy sells the commercial licence; Comfy Cloud and (per Comfy) hosted generations carry commercial rights.</dd>
+      <dt>fine-tuning</dt><dd>The card: "We release the complete model weights to support further development, including fine-tuning." No recipe from MiniMax; the recipes come from fal and AI-Toolkit (section 2.5).</dd>
+    </dl>
+  </div>
+</section>
+
+<section id="techniques">
+  <span class="eyebrow">2 · The techniques around H3</span>
+  <h2>Seven levers, each with what it buys you, what it costs, and the evidence</h2>
+  <p class="sub">"Super useful" in the transcripts means four things: faster, more faithful to a character, more controllable, and cleaner at the end. The levers below map onto those. The bake-off in section 8 tests the first four head to head; the rest are milestones.</p>
+
+  <div class="stack">
+    <div class="card">
+      <h3>2.1 · Turbo and distillation LoRAs: speed, with a known tax</h3>
+      <p>H3 at 20–25 steps is slow on rented hardware. Four-step distillations cut that by 5–6× and, on free T4s, make it usable at all. The AIQuest comparison ran three of them plus the official 8-step model on the same prompts (rEjasJZq1t8). The pattern: every distillation is sharper or smoother or faster, and each gives something back.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>LoRA</th><th>What it is</th><th>Where it won</th><th>Where it lost</th><th>Verdict in the video</th></tr></thead>
+        <tbody>
+          <tr><td>Official fl2v turbo 8-step v1.0</td><td>ComfyUI's default "turbo mode" for T2V/I2V</td><td>Fewest surprises; the template default</td><td>"Motion and audio can be slightly softer" (ComfyUI docs)</td><td>The baseline arm</td></tr>
+          <tr><td>Official ref2v turbo 4-step v0.1</td><td>Optional 4-step LoRA for reference-to-video</td><td>Speed with references</td><td>"Weaker on reference and audio adherence"; use 20–25 steps when references must hold (ComfyUI docs)</td><td>Off for identity work, on for drafts</td></tr>
+          <tr><td>PDMD 4-step</td><td>Community distillation, "top of the leaderboards" vs H3 turbo and DMD</td><td>Sharpest textures ("individual strands of hair"); best prompt following; executed the hard cut in the three-person argument; text on gloves legible</td><td>Faces "break down completely" at 480p in wide framing; 720p "still slight warping"</td><td>"Easily took the crown" for dialogue and multi-shot (12:52)</td></tr>
+          <tr><td>ByteDance DMAD 4-step</td><td>Distillation claiming to beat its 50-step teacher (79% preference vs DMD2/RCM)</td><td>"Organic and fluid" motion; the cleanest 720p human render; cinematic lighting</td><td>Softer detail; hallucinated extra text; "heavy and sluggish" kaiju physics</td><td>Pick for cinematic motion</td></tr>
+          <tr><td>Fused Turbo (<code>MATLOWAI/minimax-h3-fused-turbo-int8-convrot</code>)</td><td>LoRA baked into the transformer file; supports t2v, i2v and r2v</td><td>10–15 s faster per 5 s clip; best colour and lighting depth; felt the kaiju impact</td><td>Worst faces at 480p ("heavy visual noise"); faked the camera cut instead of cutting</td><td>Pick for colour and speed, not for people</td></tr>
+        </tbody>
+      </table></div>
+      <p class="cite">Settings used: 480p for all tests "so we aren't stuck waiting", peak quality at 720p; close-ups fix faces at 480p ("framing is everything", 12:40). Singularity's creator ran its 4-step LoRA at strength 0.9 (1xjB1c00hM4 5:36).</p>
+    </div>
+
+    <div class="card">
+      <h3>2.2 · Fine-tuned checkpoints: Singularity, and why "newer" is a variable, not an upgrade</h3>
+      <p>The video you sent (1xjB1c00hM4, "The Ai Blueprint") is a V1.3-vs-V2 test of <code>WarmBloodAban/Minimax-h3_Singularity</code>, a community fusion of H3's ref, fl and b25-49 checkpoints, "deep fine-tuned and then pruned" to INT8 (ComfyUI Wiki). It runs in the same ComfyUI workflow as base H3 and supports text-, image- and reference-to-video. V2 (21 Oct 2026) adds "expanded action coverage, improved prompt adherence, audio fixes, and enhanced visual styles" and fixes the audio-reference path that V1 did not condition on.</p>
+      <div class="split">
+        <div>
+          <b>How he ran it</b>
+          <ul>
+            <li>9 s clip at ~1.5 MP, portrait widescreen; "a LoRA and a reference image to help maintain the character's identity" (2:34)</li>
+            <li>10 steps, Euler sampler, beta scheduler; "you can experiment with six steps" (2:58); patch attention on for speed (3:11)</li>
+            <li>DLSS-R at 1.5× with quality −1: "results weren't consistently better" (3:39)</li>
+            <li>Two-character test: identity references for "girl one and girl two", 8 s, both walk in and say "Welcome" (5:40). Both identities held in both versions.</li>
+          </ul>
+        </div>
+        <div>
+          <b>What he found</b>
+          <ul>
+            <li>"At first glance, both versions look fairly similar" (4:55); he still prefers V1.3's lighting.</li>
+            <li>"Version two's audio sounded better overall" (7:56), the one clear win.</li>
+            <li>"I wouldn't recommend switching models purely because the newer version is available" (7:38).</li>
+          </ul>
+          <p class="cite">Lesson for the harness: the checkpoint is a logged variable with a seed-matched A/B, never a silent default. The same test that caught "V2 ≈ V1.3" is the test that will catch a real regression later.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>2.3 · Reference-to-video: identity without training</h3>
+      <p>H3's <code>ref2va</code> mode takes your character as pictures, video and audio and is told, in the prompt, which reference is which. This is the cheapest consistency you can buy: zero training, one reference sheet reused for every shot.</p>
+      <ul>
+        <li>Up to 9 images, 3 videos, 3 audio clips. Tag each <code>&lt;Picture N&gt;</code>, <code>&lt;Video N&gt;</code>, <code>&lt;Audio N&gt;</code>; <code>ref_image_0</code> is <code>&lt;Picture 1&gt;</code>. One image can hold several panels (a front/side/expression sheet), and a shot can point at "the full front view of <code>&lt;Picture 2&gt;</code>".</li>
+        <li>Audio references carry <b>timbre, not words</b>: write the delivery in the prompt, one audio reference per speaker when assignment must be exact. Mark each audio as <code>fully_copy</code>, <code>partially_copy</code>, <code>reference</code> or <code>weak_reference</code>.</li>
+        <li>Reference video is read as 24 fps with no metadata: convert first. <code>ref_image_size: max</code> keeps a 2048 px short edge but is "much slower".</li>
+        <li>When references must hold, run 20–25 steps without the 4-step LoRA, and keep style LoRAs near 0.5.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>2.4 · Structure control: Fun ControlNet Union and SolarRenderer</h3>
+      <p>Two ways to dictate <i>motion</i> rather than describe it. Fun ControlNet Union 2.0 (ComfyUI 0.38+) takes Canny, Depth, HED, MLSD or Pose control video and masked inpainting. SolarRenderer (uYLdk6Hkq8k) goes further: a control adapter plus a 4-step adapter on the frozen 33B backbone, "any structure in, any world out".</p>
+      <ul>
+        <li>16 structure types in its evaluation, 11 unseen in training: skeletons, meshes, depth, normal maps, voxels, moving boxes, children's drawings (1:15).</li>
+        <li>4-step version samples ~12.3× faster than its 50-step control model; Elo 1,510 vs 1,410 (Lin Real Omni) and 1,189 (ControlNet Union), Gemini as judge plus a blind human check (0:34–1:05).</li>
+        <li>Real-time: gameplay re-rendered as a stream about 1.1 s behind the input (7:21).</li>
+        <li>"The documented low-memory ComfyUI workflow targets a 16 GB GPU using 8-bit models and offloading" (9:54). Code Apache-2.0; weights under the H3 community licence.</li>
+        <li>Use for you: lock choreography with a Mixamo skeleton once, then re-skin the same move as astronaut, armour or ink (5:25), the "character concept" test he calls out.</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3>2.5 · A custom LoRA: the character that survives the whole project</h3>
+      <p>H3 LoRAs are trainable today. fal runs four trainers (<code>minimax/h3/t2v/trainer</code>, <code>i2v</code>, <code>flf2v</code>, <code>ref2va</code>); Ostris AI-Toolkit added a <code>minimax_h3</code> extension on 3 Aug 2026 (RunComfy hosts it); Fizgig lists H3 too. One dated blog says H3 cannot be LoRA-trained; the trainer docs and fal's published 16-run campaign say otherwise. The recipe below is fal's, with the ComfyUI Flux LoRA video (m3ENCAwWDXc) as the image-side cross-check.</p>
+      <div class="tablewrap"><table>
+        <thead><tr><th>Setting</th><th>fal's H3 recipe</th><th>Why</th></tr></thead>
+        <tbody>
+          <tr><td>Dataset</td><td>10 clips minimum, 50–200 best; 3–15 s each; <b>exactly 24.000 fps</b>; keep the audio track; trim fades and black frames; buckets 1280×704, 1280×544, 960×704</td><td>"Two thirds of its people clips were slow motion, which made outputs dreamy, floaty": retime to natural speed, hand-review every clip (they kept 176 of 253)</td></tr>
+          <tr><td>Captions</td><td>One paragraph per clip: subject, action, setting, lighting, camera, as a <code>.txt</code> sidecar</td><td>Flux video trained 36 images with no captions and got one face back; captions "will work much better" when prompting</td></tr>
+          <tr><td>Trigger</td><td><code>trigger_phrase</code> in the trainer <i>or</i> baked into captions, never both</td><td>Duplication "degrades prompt adherence"</td></tr>
+          <tr><td>Rank · LR · steps</td><td>Rank 16 beat 32 and 64 for a realism adapter; LR 2e-4 (1e-4 "slow-cook"); 1,500 steps on 53 clips, 3,000+ on 176; best run rank 16, 5,000 steps, 1e-4, 176 clips</td><td>Scale steps with clips; run a 1,000-step test before a sweep</td></tr>
+          <tr><td>Frames</td><td>73 frames per training sample (<code>frames % 17 == 5</code>), 24 fps, resolution <code>medium</code> (<code>high</code> showed no gain at 768p)</td><td>Same frame grid as inference</td></tr>
+          <tr><td>Time</td><td>~1.5 h (2,000 steps) to ~2.5 h (5,000 steps) on fal; billed per step, rate on the model page</td><td>Flux image LoRA: 36 images at 1024, defaults, "almost 5 hours" on a 24 GB 3090</td></tr>
+          <tr><td>Judging</td><td>Same-seed A/B, <code>scale 0</code> vs <code>scale 1</code>, across many prompts; scale 1.0 intended, 0.6–0.8 lighter</td><td>"Don't judge on one generation, since different weights change composition"; archive the <code>.safetensors</code>, CDN links expire</td></tr>
+        </tbody>
+      </table></div>
+      <p class="cite">Where the clips come from when the character is new: generate them. Design the character once as a reference sheet with an image model, render 60–100 short clips with the winning bake-off arm and ref2va, keep the ones where the identity held, caption them, train. The LoRA then carries the identity without needing the sheet in every prompt, and the sheet stays as a belt-and-braces reference.</p>
+    </div>
+
+    <div class="card">
+      <h3>2.6 · The prompt format: the free lever with the biggest swing</h3>
+      <p>H3 was trained on structured prompts, and the ComfyUI prompt guide is specific. Singularity's author: "the way you structure your prompt can make a noticeable difference" (1:40). The rules that matter:</p>
+      <ul>
+        <li>Three fields: <code>integrated_multimodal_description</code> (shots, camera, dialogue), <code>overall_soundscape</code> (1–4 sentences of ambience and SFX, <code>N/A</code> only if silent), <code>non_diegetic_music</code> (score only, 1–3 sentences or <code>N/A</code>).</li>
+        <li>Shots are numbered; <code>[Shot 1]</code> starts at 0.00 s; later shots open with one cut time: <code>[Shot 2] At 00:03.500, the camera cuts to…</code>. No ranges, times increase, cuts phrased as actions.</li>
+        <li>Speech: speaker ids <code>(S1)</code>, <code>(S2)</code> outside the tag, words inside <code>&lt;d&gt;[English] …&lt;/d&gt;</code> with punctuation, no ellipses, in the shot where they are spoken. Off-screen voice: say "in an off-screen voiceover" and that lips stay closed.</li>
+        <li>No negative prompts: <code>cfg</code> is 1, so a ban list <i>adds</i> the concepts it names. Describe what should be there.</li>
+        <li>1344×768 native at 16:9; I2V templates open at 640×640 and need the aspect ratio set; a first frame is stretched to the canvas, a last frame centre-cropped.</li>
+      </ul>
+      <p><b>A complete brief in the format</b> (written to the guide's spec for the first test; an original character, no real likeness):</p>
+<pre><code>integrated_multimodal_description: A neon-lit night market in heavy rain. [Shot 1] A woman in her thirties with short silver hair and a yellow rain jacket (Mara) stands under a stall awning shaking water from her sleeve; handheld medium shot, shallow depth of field, cyan and magenta neon reflected on wet stone. (S1) She looks just past the camera and says, half-smiling, &lt;d&gt;[English] You said it never rains here.&lt;/d&gt; [Shot 2] At 00:04.500, the camera cuts to a low wide shot across the puddled street as she steps out into the rain and walks toward a parked scooter, steam rising from food stalls on both sides.
+overall_soundscape: Steady rain on canvas awnings, distant sizzling woks, a scooter idling, muffled market chatter.
+non_diegetic_music: N/A</code></pre>
+      <p class="cite">8 s → 192 frames (17×11+5). It has one identity, one line, one hard cut and one wide shot: the four things the transcripts show distillations fail on, so the bake-off has something to measure.</p>
+    </div>
+
+    <div class="card">
+      <h3>2.7 · Post: upscale last, and only what survived</h3>
+      <ul>
+        <li><b>FlashVSR+</b> (e1sJ78nHLDM): 1.3B one-step video super-resolution; 480p→1080p for a 5 s clip in 2 min 1 s on Kaggle's two T4s; 0.98 fps on a 4090 vs SeedVSR 0.18; "large motion" modes cost 2–4×; 4K "extremely slow" on free GPUs. It "will not magically erase broken structural artifacts that were baked in by your original AI video generator" (3:45).</li>
+        <li>Hosted alternatives on fal: SeedVR2 (temporally consistent) and Topaz.</li>
+        <li>Resolution discipline from the H3 tests: iterate at 480p, render finals at 540p or 720p, and frame faces close; a wide shot at 480p is where faces melt.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="where">
+  <span class="eyebrow">3 · Where to run it</span>
+  <h2>Kaggle to see it, Modal to build on it, fal to train on it</h2>
+  <p class="sub">Your Mac is out. Below are the four rentals that fit, with real prices where I could get them. Prices are per hour of GPU; a clip's cost is that rate times the render time, so the turbo LoRAs are also a cost lever.</p>
+  <div class="tablewrap"><table>
+    <thead><tr><th>Option</th><th>What you get</th><th>Cost</th><th>Fits the harness?</th><th>Use it for</th></tr></thead>
+    <tbody>
+      <tr><td>Your Mac</td><td>M1 Pro, 32 GB unified, no CUDA. ComfyUI runs on Apple silicon for small models; a 33B video model is out of reach.</td><td>—</td><td>Runs the harness, the judge and the review pages</td><td>Everything except generation</td></tr>
+      <tr><td>Kaggle 2×T4 (free)</td><td>AIQuest's notebook (<code>github.com/TeamAIQ/Colab-notebooks</code>, "MiniMax H3 Turbo"): two cells, ~40 GB of weights in ~3 min, engine init ~3 min, Gradio UI behind a Cloudflare link. LoRA picker (PDMD / DMAD / fused / official), style LoRAs, up to 15 s, first/last frame, a ref2v tab with audio and 3 images.</td><td>$0. Needs a phone-verified account and accelerator "GPU T4 ×2". Weekly GPU quota applies (check the current hours).</td><td>Manual: clips and metadata downloaded by hand and imported with <code>vg import</code></td><td>Day 1 and every cheap look at a new LoRA or checkpoint</td></tr>
+      <tr><td>Modal (you are logged in)</td><td>Serverless GPU functions; weights in a Volume; ComfyUI headless, workflow JSON submitted from code. Your <code>tau-telecom-sft</code> Modal skill ships an LTX image-to-video example and a Wan LoRA fine-tune example to crib from.</td><td>T4 $0.59/h · L4 $0.80 · A10 $1.10 · L40S (48 GB) $1.95 · A100-80 $2.50 · H100 $3.95 · H200 $4.54; $30/month free credit on the Starter plan</td><td>Yes: this is the <code>modal</code> provider in the harness; every run is code</td><td>The bake-off, re-runs, batches with cost caps</td></tr>
+      <tr><td>fal</td><td>Hosted <code>minimax/h3-max/text-to-video</code> and <code>h3-max-turbo</code> (up to 15 s at 480p or 768p); open-weight endpoints with LoRAs (<code>text-to-video/lora</code>, <code>image-to-video/lora</code>); the four H3 LoRA trainers; an <code>h3-cinematic-prompter</code> skill. No <code>FAL_KEY</code> in <code>~/.env</code> yet.</td><td>Per clip (price on each model page); training billed per step</td><td>Yes: the <code>fal</code> provider, and the only training path that needs no infra</td><td>Hosted reference arm; LoRA training; commercial-rights outputs if the licence bites</td></tr>
+      <tr><td>Comfy Cloud / Comfy licence</td><td>ComfyUI's hosted runtime; the official reseller of MiniMax's commercial licence</td><td>Not priced here</td><td>Partly (same workflows)</td><td>Fallback if you are in an excluded territory and want local-style control</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout">
+    <p><b>Recommendation.</b> Run the first test on Kaggle this week: it is free, the notebook already carries the four turbo variants, and you will learn what 480p, a wide shot and a hard cut do to H3 before you spend anything. Build the harness against Modal, because it is already configured and a run there is a function call with a cost cap, which is what AGENTS.md's rules 1–4 need. Train the LoRA on fal: a per-step bill and a two-hour wait beats building a trainer. Keep hosted H3 Max as the quality ceiling in the bake-off so you can see what the open weights give up.</p>
+  </div>
+</section>
+
+<section id="memory">
+  <span class="eyebrow">4 · Memory</span>
+  <h2>How a character survives from clip to clip, in three layers</h2>
+  <figure class="fig">
+    <svg viewBox="0 0 780 232" width="100%" role="img" aria-labelledby="f2t">
+      <title id="f2t">Three layers of consistency: per-shot references, a per-project LoRA, and cross-shot continuity mechanics</title>
+      <g id="f2-l1">
+        <rect class="box" x="10" y="12" width="500" height="60" rx="6"/>
+        <text x="22" y="32" font-weight="600">Per shot · references (ref2va)</text>
+        <text x="22" y="50" class="mono muted">reference sheet as &lt;Picture 1&gt; · voice clip as &lt;Audio 1&gt; · 20–25 steps, no 4-step LoRA</text>
+        <text x="22" y="64" class="mono muted">cost: none beyond the clip · holds identity within one clip; drifts across many</text>
+        <rect class="wash" x="520" y="12" width="250" height="60" rx="6"/>
+        <text x="532" y="32" font-weight="600">M1–M2</text><text x="532" y="50" class="mono muted">needs: one reference sheet</text><text x="532" y="64" class="mono muted">evidence: 1xjB1c00hM4 5:40 two-girl test</text>
+      </g>
+      <path class="edge" d="M260 72 V92"/>
+      <g id="f2-l2">
+        <rect class="core" x="10" y="94" width="500" height="60" rx="6"/>
+        <text x="22" y="114" font-weight="600">Per project · a trained LoRA</text>
+        <text x="22" y="132" class="mono muted">50–200 clips of the character · rank 16 · ~2 h on fal · loaded at scale 1.0 in every run</text>
+        <text x="22" y="146" class="mono muted">cost: dataset work + one training bill · identity persists without the sheet</text>
+        <rect class="wash" x="520" y="94" width="250" height="60" rx="6"/>
+        <text x="532" y="114" font-weight="600">M3</text><text x="532" y="132" class="mono muted">needs: curated clips + captions</text><text x="532" y="146" class="mono muted">evidence: fal 16-run campaign</text>
+      </g>
+      <path class="edge" d="M260 154 V174"/>
+      <g id="f2-l3">
+        <rect class="box" x="10" y="176" width="500" height="50" rx="6"/>
+        <text x="22" y="196" font-weight="600">Across shots · continuity mechanics</text>
+        <text x="22" y="214" class="mono muted">[Shot N] cuts inside one 15 s clip · last frame → next clip's first frame · StoryMem-style memory (Wan 2.2 only today)</text>
+        <rect class="wash" x="520" y="176" width="250" height="50" rx="6"/>
+        <text x="532" y="196" font-weight="600">M4</text><text x="532" y="214" class="mono muted">needs: the two layers above</text>
+      </g>
+    </svg>
+    <figcaption>Each layer stacks on the one above it. The LoRA is what makes "longitudinal" memory real: it is the only layer that does not have to be re-supplied every generation.</figcaption>
+  </figure>
+  <div class="split">
+    <div>
+      <h3>What the other tools do about it</h3>
+      <ul>
+        <li><b>StoryMem</b> (GM70MDyl94E): a 0.7B LoRA on Wan 2.2 14B that keeps "a compact memory bank" of key frames from earlier shots and injects them into the next; 28.7% better cross-shot consistency than base Wan, 9.4% over HoloCine; three weights (t2v, i2v, memory-to-video, which seeds the memory with your reference images); ~16 GB VRAM with an FP8/FP4 backbone. Open source, but it is a Wan technique: H3 has no equivalent yet. Worth an arm only if H3's own continuity fails M4.</li>
+        <li><b>Seedance 2.5</b> (rIM4N6CPyho, bNDcnDoqYoo): hosted only (BytePlus Lumina / fal / Higgsfield); 30 s single renders, "multi-round extensions" to ~2 min, up to 50 references cited in the prompt with <code>@</code>. It is the quality reference in every AIQuest comparison ("Seedance 2.5, which nailed this test"). A fair ceiling arm, not a thing you can own.</li>
+        <li><b>LTX 2.5</b> (QMlrXTFFbLU, Dfrdf_YhKGM): open weights (gated), native multi-shot where "lighting, environment, and even the voice hold up across cuts"; 22B distill runs on Kaggle at ~7 GB VRAM but 457 s per 5 s clip at 480p, with a recurring hallucinated extra person. A credible second open model if H3's licence is a problem for you.</li>
+      </ul>
+    </div>
+    <div>
+      <h3>What the harness does about it</h3>
+      <ul>
+        <li>A <b>character bible</b> is data, committed: <code>characters/mara/sheet.png</code> (front, three-quarter, profile, two expressions), <code>voice.wav</code>, <code>bible.yaml</code> (the fixed descriptive sentence used verbatim in every prompt), and later <code>lora/mara-v1.safetensors</code> with its training record.</li>
+        <li>Every job that names a character gets the sheet and the sentence injected by the prompt builder, so consistency is not a thing you remember to do.</li>
+        <li>Identity is a <b>measured</b> score (section 8), tracked per character across runs in MLflow, so you can see drift as a line, not a feeling.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<section id="harness">
+  <span class="eyebrow">5 · The harness</span>
+  <h2>One job record, three providers, everything cached and logged</h2>
+  <p class="sub">This is the <code>src/video_gen/</code> that AGENTS.md sketches, made concrete. It keeps rules 1–4: every clip reproducible from its record, every paid call cached, cost known before it is spent, one module for every generation call.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 780 170" width="100%" role="img" aria-labelledby="f3t">
+      <title id="f3t">Pipeline from brief to review page</title>
+      <g id="f3-brief"><rect class="box" x="10" y="40" width="110" height="52" rx="6"/><text x="20" y="60" font-weight="600">brief.yaml</text><text x="20" y="76" class="mono muted">shots · character</text><text x="20" y="88" class="mono muted">seeds · arms</text></g>
+      <path class="edge" d="M120 66 H148"/>
+      <g id="f3-prompt"><rect class="box" x="150" y="40" width="120" height="52" rx="6"/><text x="160" y="60" font-weight="600">prompt builder</text><text x="160" y="76" class="mono muted">H3 structured format</text><text x="160" y="88" class="mono muted">+ bible sentence</text></g>
+      <path class="edge" d="M270 66 H298"/>
+      <g id="f3-job"><rect class="core" x="300" y="30" width="130" height="72" rx="6"/><text x="310" y="50" font-weight="600">job → cache key</text><text x="310" y="66" class="mono muted">model · loras · prompt</text><text x="310" y="80" class="mono muted">seed · res · frames · steps</text><text x="310" y="94" class="mono muted">hit? → no spend</text></g>
+      <path class="edge" d="M430 66 H458"/>
+      <g id="f3-prov"><rect class="box" x="460" y="18" width="120" height="96" rx="6"/><text x="470" y="38" font-weight="600">provider</text><text x="470" y="56" class="mono">modal · ComfyUI API</text><text x="470" y="72" class="mono">fal · HTTP</text><text x="470" y="88" class="mono">kaggle · import</text><text x="470" y="106" class="mono muted">cost cap per run</text></g>
+      <path class="edge" d="M580 66 H608"/>
+      <g id="f3-out"><rect class="box" x="610" y="40" width="160" height="52" rx="6"/><text x="620" y="60" font-weight="600">outputs/ + MLflow run</text><text x="620" y="76" class="mono muted">video-gen/bakeoff</text><text x="620" y="88" class="mono muted">params · cost · path · scores</text></g>
+      <path class="edge" d="M690 92 V120"/>
+      <g id="f3-judge"><rect class="box" x="530" y="122" width="240" height="40" rx="6"/><text x="540" y="140" font-weight="600">judge</text><text x="580" y="140" class="mono muted">blind pairwise page (you) · optional VLM score</text><text x="540" y="156" class="mono muted">→ .lavish/s01 results</text></g>
+    </svg>
+    <figcaption>A Kaggle clip enters at the same job record as a Modal clip: <code>vg import</code> takes the downloaded MP4 plus the metadata the notebook saves under the player, and files it like any other run.</figcaption>
+  </figure>
+  <div class="split">
+    <div>
+      <h3>Layout</h3>
+<pre><code>src/video_gen/
+  config.py        settings; ./.env then ~/.env
+  jobs.py          Job, Generation, cache_key(), estimate_cost()
+  prompts/h3.py    brief → integrated_multimodal_description etc.
+  providers/
+    base.py        Provider.generate(job) -> Generation
+    modal_comfy.py ComfyUI headless on Modal; weights in a Volume
+    fal_api.py     h3-max, h3 lora endpoints, trainers
+    kaggle.py      import-only: MP4 + metadata → Generation
+  cache.py         outputs/&lt;key&gt;/clip.mp4 + record.json
+  judge.py         rubric, pairwise page data, optional VLM
+  tracking.py      MLflow: project, git_sha, env, cost tags
+  cli.py           vg run · vg bakeoff · vg import · vg judge · vg train
+briefs/            mara-rain.yaml …          (committed)
+characters/mara/   sheet.png · voice.wav · bible.yaml
+workflows/         ComfyUI API-format JSON, one per arm
+prompts/           committed prompt templates
+assets/samples/    curated outputs, committed on purpose
+outputs/           everything generated; gitignored
+ai_specs/          s01_first-test.md (this page's decisions)</code></pre>
+    </div>
+    <div>
+      <h3>The job record (what reproducibility means here)</h3>
+      <dl class="kv">
+        <dt>identity</dt><dd><code>brief_id</code>, <code>shot_id</code>, <code>arm</code>, <code>character</code></dd>
+        <dt>model</dt><dd>checkpoint name + sha256, text encoder, VAEs, each LoRA with strength, patches</dd>
+        <dt>prompt</dt><dd>the three H3 fields verbatim, plus the bible sentence version</dd>
+        <dt>sampling</dt><dd>seed, width×height, frames, fps, steps, sampler, scheduler, cfg</dd>
+        <dt>references</dt><dd>sha256 of every image/audio/video reference and its tag</dd>
+        <dt>provider</dt><dd>name, GPU type, wall-clock, measured cost (or quoted price), job/request id</dd>
+        <dt>output</dt><dd>path, sha256, duration, resolution; MLflow run id</dd>
+        <dt>scores</dt><dd>rubric fields from the judge, who judged, when</dd>
+      </dl>
+      <p class="cite">The cache key is the hash of identity + model + prompt + sampling + references. Same key, no second bill. <code>vg bakeoff --dry-run</code> prints the job count and the estimate before anything is sent; a per-run cap refuses to start past it.</p>
+      <h3>MLflow</h3>
+      <p>Experiment <code>video-gen/bakeoff</code> (later <code>video-gen/lora</code>), tags <code>project</code>, <code>git_sha</code>, <code>env=local</code>, <code>billing=&lt;provider&gt;</code>. Clips are logged by path and key, not as artifacts (they are large); the record JSON and the judge CSV are artifacts. Onboarding into <code>registry/projects.yaml</code> with a zero-cost <code>vg smoke</code> happens before the first tracked run, as AGENTS.md says.</p>
+    </div>
+  </div>
+</section>
+
+<section id="milestones">
+  <span class="eyebrow">6 · Milestones</span>
+  <h2>Five steps, each with a thing you can look at</h2>
+  <div class="tablewrap"><table class="ms">
+    <thead><tr><th>Milestone</th><th>Builds</th><th>Done when</th><th>Spend</th></tr></thead>
+    <tbody>
+      <tr><td>M1 · first clip</td><td>Licence check; Kaggle run of the Mara brief through PDMD, DMAD, Fused and the official model at one seed; <code>vg import</code>; <code>.lavish/s01</code> with the four clips side by side and your scores</td><td>Four clips with full records, a one-line verdict per arm, and you have seen a face melt at 480p</td><td>$0</td></tr>
+      <tr><td>M2 · harness + bake-off</td><td><code>jobs</code>, <code>cache</code>, <code>prompts/h3</code>, the <code>modal</code> provider (ComfyUI headless), the <code>fal</code> provider, MLflow, <code>vg bakeoff</code>; four arms × six prompts × two seeds; blind pairwise judge page</td><td>48 clips logged with cost; rubric scored; one arm chosen by numbers; registry entry + <code>vg smoke</code> green</td><td>≈ $5–15 Modal + the hosted reference clips</td></tr>
+      <tr><td>M3 · character LoRA</td><td>Character bible; 60–100 generated clips through the winning arm + ref2va, hand-reviewed and captioned at 24.000 fps; fal <code>t2v</code> trainer (rank 16, 1,500–3,000 steps); same-seed A/B at scale 0 vs 1 over ten prompts</td><td>Identity score with the LoRA beats references-only on the same seeds, and holds in a wide shot</td><td>One training run (per-step rate on fal) + ≈ 100 clips</td></tr>
+      <tr><td>M4 · continuity</td><td>Multi-shot briefs, last-frame chaining, FlashVSR+ or SeedVR2 pass, a 45–60 s piece; optional SolarRenderer arm for choreography</td><td>A 45 s story with the identity score holding across every cut, at 720p or better</td><td>≈ $10–30</td></tr>
+      <tr><td>M5 · showcase</td><td>Best outputs and the method as a portfolio page; <code>showcase.yaml</code> like the siblings</td><td>Published, with the cost per finished second stated</td><td>—</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="first-test">
+  <span class="eyebrow">7 · Your first test, step by step</span>
+  <h2>Ninety minutes on Kaggle, four clips, one record each</h2>
+  <div class="steps">
+    <div class="step"><b>Settle the licence question.</b> Read the LICENSE and Q&amp;A on <code>huggingface.co/MiniMaxAI/MiniMax-H3</code>. If you are in the US, EU, UK or South Korea, file the form at <code>platform.minimax.io/h3-license</code> now (reported as effectively self-serve) and do M1 through fal's hosted H3 Max instead, which carries its own rights. Answer Q1 below either way.<span class="tag">10 min · blocks everything</span></div>
+    <div class="step"><b>Open the notebook.</b> <code>github.com/TeamAIQ/Colab-notebooks</code> → the MiniMax H3 Turbo entry → Kaggle badge. Kaggle settings: accelerator <b>GPU T4 ×2</b>; the account must be phone-verified or the GPU option is greyed out. In cell 1 set the LoRA variable to <code>PDMD</code>. Run all: ~3 min for the 40 GB of weights, ~3 min to initialise (9.3 GB per card, ~22 GB RAM). Open the <b>Cloudflare</b> link, not the Gradio one.<span class="tag">10 min · free</span></div>
+    <div class="step"><b>Generate the brief.</b> Paste the three fields from 2.6 (put the soundscape and the spoken line in their own boxes if you prefer; the UI splits them). 480p, 16:9, 8 s, note the seed the UI shows or set one. Expect about 3 min at 480p for 5 s, a little more for 8 s.<span class="tag">5 min</span></div>
+    <div class="step"><b>Repeat for the other arms at the same seed.</b> Change cell 1 to <code>DMAD</code>, then <code>fused</code>, then <code>official</code> (the 8-step reference-to-video model), re-run, same prompt, same seed. Download each MP4 and the metadata block saved under the player.<span class="tag">45 min · free</span></div>
+    <div class="step"><b>One 720p render of the arm that looked best.</b> Same seed. This is the "does the face hold at the resolution I'd publish" check the transcripts say to do before trusting 480p.<span class="tag">10 min</span></div>
+    <div class="step"><b>Record and score.</b> <code>vg import kaggle/*.mp4 --brief mara-rain --arm &lt;name&gt; --seed N</code> (or, before the CLI exists, one <code>record.json</code> per clip in <code>outputs/</code> with the fields from section 5). Score each clip on the rubric in section 8. Write the one-line verdict per arm into <code>ai_specs/s01_first-test.md</code>.<span class="tag">15 min</span></div>
+    <div class="step"><b>Look for four specific things.</b> Did the cut at 4.5 s happen as a cut (PDMD did, Fused faked it)? Is the line intelligible and lip-synced? Did the wide shot keep her face (480p says no; 720p says maybe)? Did the rain and neon look like the prompt or like generic night?<span class="tag">the point of the exercise</span></div>
+  </div>
+  <div class="callout warn">
+    <p><b>Two things not to do on day one.</b> Don't add a reference image yet: the first test measures the prompt and the distillations alone, so the reference arm has a clean baseline to beat. Don't use a real person as the character: AGENTS.md rule 6, and the SolarRenderer demo's use of public figures is exactly the thing to avoid.</p>
+  </div>
+</section>
+
+<section id="bakeoff">
+  <span class="eyebrow">8 · The bake-off (M2)</span>
+  <h2>Same brief, same seeds, four techniques, one hosted ceiling</h2>
+  <p class="sub">The design holds everything constant except the technique. Six prompts (the Mara brief plus five more covering a product, a two-person dialogue, fast action, text on screen, and a silent landscape), two seeds each, every arm. 48 open-weight clips plus 12 hosted.</p>
+  <div class="tablewrap"><table class="arms">
+    <thead><tr><th>Arm</th><th>Checkpoint</th><th>LoRAs</th><th>Steps</th><th>Refs</th><th>What it tests</th></tr></thead>
+    <tbody>
+      <tr><td>A · base turbo</td><td>H3 fl2va pruned INT8</td><td>official fl2v 8-step at 1.0</td><td>8</td><td>none</td><td>The ComfyUI default; the baseline</td></tr>
+      <tr><td>B · PDMD</td><td>H3 fl2va pruned INT8</td><td>PDMD 4-step</td><td>4</td><td>none</td><td>The transcript's winner for cuts and dialogue, at a quarter of the steps</td></tr>
+      <tr><td>C · Singularity V2</td><td>Singularity ref2va V2 INT8</td><td>its 4-step LoRA at 0.9</td><td>10, Euler, beta</td><td>none</td><td>Does a fine-tuned checkpoint buy anything over base with the same prompt</td></tr>
+      <tr><td>D · references</td><td>H3 ref2va pruned INT8</td><td>none (or official 4-step for a draft pass)</td><td>20–25</td><td>sheet as &lt;Picture 1&gt;, voice as &lt;Audio 1&gt;</td><td>Identity without training: the thing M3's LoRA has to beat</td></tr>
+      <tr><td>R · hosted ceiling</td><td><code>minimax/h3-max/text-to-video</code> on fal</td><td>—</td><td>—</td><td>none</td><td>What the closed top tier gives you for the same prompt and price per clip</td></tr>
+    </tbody>
+  </table></div>
+  <div class="split">
+    <div>
+      <h3>Rubric (1–5 each, blind, pairwise where possible)</h3>
+      <div class="tablewrap"><table class="rubric">
+        <thead><tr><th>Score</th><th>Question</th></tr></thead>
+        <tbody>
+          <tr><td>identity</td><td>Same face, hair, clothes from first frame to last, and across the cut?</td></tr>
+          <tr><td>adherence</td><td>Did the shots, the cut time and the camera happen as written?</td></tr>
+          <tr><td>faces</td><td>Any melting, warping, extra teeth, in the wide shot especially?</td></tr>
+          <tr><td>motion</td><td>Weight and physics: does rain fall, does the scooter sit, does she walk?</td></tr>
+          <tr><td>audio</td><td>Line intelligible, lip-synced, soundscape as described, no gibberish?</td></tr>
+          <tr><td>artifacts</td><td>Count of extra people, text hallucinations, flicker, hands</td></tr>
+        </tbody>
+      </table></div>
+      <p class="cite">Pairwise is how the transcripts and the SolarRenderer paper judged; a <code>.lavish</code> page that shows two clips and asks "which" is enough. Gemini (key present) can score the same rubric as a second opinion; it is not the referee.</p>
+    </div>
+    <div>
+      <h3>Cost before anything runs</h3>
+      <ul>
+        <li>On Kaggle's two T4s a 5 s 480p 4-step clip took 182 s with the transformer split across cards; a single L40S should be several times faster. Budget 1–3 min per 480p turbo clip and 3–6 min per 720p 20-step clip on L40S at $1.95/h.</li>
+        <li>48 open clips, mixed: roughly 2–4 GPU hours ≈ $4–8, plus cold starts and the 720p finals. Call it $5–15. Inside Modal's $30 monthly credit.</li>
+        <li>12 hosted clips at fal's per-clip rate (on the model page; not fetched here).</li>
+        <li><code>vg bakeoff --dry-run</code> prints the exact count and estimate; the cap is set at $25 for M2.</li>
+      </ul>
+      <h3>Reading the result</h3>
+      <p>Expect what the transcripts found: B sharper and more faithful than A, C close to A visually with better audio, D the only one that holds identity in the wide shot, R ahead on everything and not yours. The decision the numbers make is which open arm becomes the default for M3's dataset generation.</p>
+    </div>
+  </div>
+</section>
+
+<section id="risks">
+  <span class="eyebrow">9 · Risks and open questions</span>
+  <h2>What could make this plan wrong</h2>
+  <div class="cards">
+    <div class="card"><h3>Licence geography</h3><p>If you are in an excluded territory, open-weight generation and reportedly its outputs are outside the grant until MiniMax approves the form. The plan survives (fal, Comfy Cloud, or LTX 2.5 as the open model), but M1's free path moves to a paid one. <span class="badge warn">decide first</span></p></div>
+    <div class="card"><h3>VRAM on the rented card</h3><p>Measured peaks (~32 GB on a 5090, 46 GB on a 4090 with raw weights for long clips) say L40S (48 GB) is the floor and 15 s at 768p may need an A100-80. The harness picks the GPU per job; the first Modal run is a 5 s clip to measure.</p></div>
+    <div class="card"><h3>Distillation tax on identity</h3><p>Every 4-step LoRA is "weaker on reference and audio adherence". Arm D runs at 20–25 steps for that reason; M3's dataset should be generated the same way, or the LoRA learns the distillation's softness.</p></div>
+    <div class="card"><h3>Dataset quality for the LoRA</h3><p>fal kept 176 of 253 clips and still got "floaty" output from slow motion. Hand review and a strict 24.000 fps are the two things that decide M3, not the rank.</p></div>
+    <div class="card"><h3>Model churn</h3><p>Singularity V2 landed eight days before this page; Comfy templates moved from 0.30 to 0.38 in weeks. Every arm pins filenames and hashes; a new checkpoint is a new arm, never an in-place swap.</p></div>
+    <div class="card"><h3>Kaggle quota and tooling drift</h3><p>The notebook is one creator's; "I recently combed through and patched several older tools that had broken." It is M1's tool, not M2's: the harness never depends on it.</p></div>
+    <div class="card"><h3>Likeness and rights</h3><p>Original characters only (rule 6). Reference audio for a voice must be yours or licensed. Generated media stays out of git except curated samples.</p></div>
+    <div class="card"><h3>Hosted H3 Max ≠ open H3</h3><p>The hosted tier has Context-IR pre-processing and 2K regeneration; the open weights do not. Arm R is a ceiling, and the gap it shows is partly those two components, not only the weights.</p></div>
+  </div>
+</section>
+
+<section id="decisions">
+  <span class="eyebrow">10 · Decisions</span>
+  <h2>Five things only you can settle</h2>
+  <p class="sub">Each question queues one answer; press Send to Agent when you are done, or use the copy button at the bottom if you opened this file directly.</p>
+  <div class="qgrid">
+    <div class="card">
+      <form class="q-form" data-lavish-question="licence" onsubmit="event.preventDefault(); const fd=new FormData(event.currentTarget); const a=fd.get('licence'); const n=fd.get('licence_note')||''; if(!a) return; window.lavish&&window.lavish.queuePrompt('Q1 licence/jurisdiction: '+a+(n?' — '+n:'')+'. Adjust M1 accordingly (open weights on Kaggle vs hosted fal/Comfy Cloud) and record the decision in ai_specs/s01_first-test.md.',{tag:'choice',text:'Q1 licence: '+a,element:event.currentTarget,data:{question:'licence',answer:a,note:n}}); event.currentTarget.querySelector('.queued').textContent='queued: '+a;">
+        <h3>Q1 · Where are you, for the licence?</h3>
+        <label><input type="radio" name="licence" value="outside the excluded territories (open weights are in the grant)"> Outside the US/EU/UK/South Korea: open weights are fine</label>
+        <label><input type="radio" name="licence" value="inside an excluded territory; file the MiniMax form and use hosted H3 (fal / Comfy Cloud) meanwhile"> Inside one of them: file the form, go hosted for now</label>
+        <label><input type="radio" name="licence" value="unsure; read the licence text first and report back"> Not sure: read me the operative clause first</label>
+        <input type="text" name="licence_note" placeholder="note (optional)">
+        <div class="row"><button class="btn btn-sm" type="submit">Queue answer</button><span class="queued"></span></div>
+      </form>
+    </div>
+    <div class="card">
+      <form class="q-form" data-lavish-question="first-run" onsubmit="event.preventDefault(); const fd=new FormData(event.currentTarget); const a=fd.get('run'); if(!a) return; window.lavish&&window.lavish.queuePrompt('Q2 first run: '+a+'. Write ai_specs/s01_first-test.md for that path and scaffold the matching provider first.',{tag:'choice',text:'Q2 first run: '+a,element:event.currentTarget,data:{question:'first-run',answer:a}}); event.currentTarget.querySelector('.queued').textContent='queued: '+a;">
+        <h3>Q2 · Where does the first clip run?</h3>
+        <label><input type="radio" name="run" value="Kaggle free dual T4 with the AIQuest notebook (recommended)"> Kaggle, free, this week <span class="badge rec">rec</span></label>
+        <label><input type="radio" name="run" value="Modal straight away: build the ComfyUI-on-Modal provider first"> Modal from day one (skip the notebook)</label>
+        <label><input type="radio" name="run" value="fal hosted H3 Max only, no open weights yet"> fal hosted only for now</label>
+        <div class="row"><button class="btn btn-sm" type="submit">Queue answer</button><span class="queued"></span></div>
+      </form>
+    </div>
+    <div class="card">
+      <form class="q-form" data-lavish-question="arms" onsubmit="event.preventDefault(); const sel=[...event.currentTarget.querySelectorAll('input[name=arm]:checked')].map(i=>({id:i.value,label:i.dataset.label})); if(!sel.length) return; window.lavish&&window.lavish.queuePrompt('Q3 bake-off arms: run exactly these arms in M2: '+sel.map(s=>s.id+' ('+s.label+')').join('; ')+'. Account for every listed arm id when scaffolding workflows/.',{tag:'tracked-batch',text:'Q3 arms: '+sel.map(s=>s.id).join(', '),element:event.currentTarget,data:{question:'arms',items:sel}}); event.currentTarget.querySelector('.queued').textContent='queued: '+sel.map(s=>s.id).join(', ');">
+        <h3>Q3 · Which arms go in the bake-off?</h3>
+        <label><input type="checkbox" name="arm" value="A" data-label="base + official 8-step turbo" checked> A · base + official 8-step turbo</label>
+        <label><input type="checkbox" name="arm" value="B" data-label="PDMD 4-step" checked> B · PDMD 4-step</label>
+        <label><input type="checkbox" name="arm" value="C" data-label="Singularity V2" checked> C · Singularity V2</label>
+        <label><input type="checkbox" name="arm" value="D" data-label="ref2va with character sheet + voice" checked> D · references (sheet + voice)</label>
+        <label><input type="checkbox" name="arm" value="R" data-label="hosted H3 Max on fal" checked> R · hosted H3 Max ceiling</label>
+        <label><input type="checkbox" name="arm" value="B2" data-label="DMAD 4-step"> B2 · DMAD 4-step</label>
+        <label><input type="checkbox" name="arm" value="B3" data-label="Fused Turbo"> B3 · Fused Turbo</label>
+        <label><input type="checkbox" name="arm" value="L" data-label="LTX 2.5 distill as an open-model control"> L · LTX 2.5 as an open-model control</label>
+        <label><input type="checkbox" name="arm" value="S" data-label="SolarRenderer skeleton-driven"> S · SolarRenderer (choreography), probably M4</label>
+        <div class="row"><button class="btn btn-sm" type="submit">Queue selected arms</button><span class="queued"></span></div>
+      </form>
+    </div>
+    <div class="card">
+      <form class="q-form" data-lavish-question="character" onsubmit="event.preventDefault(); const fd=new FormData(event.currentTarget); const a=fd.get('char'); const n=fd.get('char_note')||''; if(!a) return; window.lavish&&window.lavish.queuePrompt('Q4 first character/subject: '+a+(n?' — '+n:'')+'. Write the character bible skeleton under characters/ and adapt the six bake-off briefs to it.',{tag:'choice',text:'Q4 character: '+a,element:event.currentTarget,data:{question:'character',answer:a,note:n}}); event.currentTarget.querySelector('.queued').textContent='queued: '+a;">
+        <h3>Q4 · What is the recurring thing?</h3>
+        <label><input type="radio" name="char" value="an original human character designed from a reference sheet (Mara or similar)"> An original character (Mara in the brief) <span class="badge rec">rec</span></label>
+        <label><input type="radio" name="char" value="a product (packshot-driven commercial, like the energy-drink workflow)"> A product, commercial-style</label>
+        <label><input type="radio" name="char" value="a visual style only, no fixed character"> A style, not a character</label>
+        <input type="text" name="char_note" placeholder="describe it in a line (optional)">
+        <div class="row"><button class="btn btn-sm" type="submit">Queue answer</button><span class="queued"></span></div>
+      </form>
+    </div>
+    <div class="card">
+      <form class="q-form" data-lavish-question="hue" onsubmit="event.preventDefault(); const fd=new FormData(event.currentTarget); const a=fd.get('hue'); if(!a) return; window.lavish&&window.lavish.queuePrompt('Q5 project hue: '+a+'. Update .lavish/project.css and, when the project is added to the registry, ui.hue.',{tag:'choice',text:'Q5 hue: '+a,element:event.currentTarget,data:{question:'hue',answer:a}}); event.currentTarget.querySelector('.queued').textContent='queued: '+a;">
+        <h3>Q5 · This page's colour</h3>
+        <p class="small">video-gen is not in the registry and no hue is a full 30° from the ten in use; this page wears a provisional 228 (28° from 200, 27° from 255), the widest gap left.</p>
+        <label><input type="radio" name="hue" value="keep provisional hue 228"> Keep 228</label>
+        <label><input type="radio" name="hue" value="share a sibling's hue like rotation-tracker did (name which)"> Share a sibling's hue instead</label>
+        <label><input type="radio" name="hue" value="pick a different provisional hue (name it)"> A different number</label>
+        <div class="row"><button class="btn btn-sm" type="submit">Queue answer</button><span class="queued"></span></div>
+      </form>
+    </div>
+  </div>
+  <div class="copyrow">
+    <button class="btn btn-sm" type="button" onclick="(async (btn) => {
+      const qs=[...document.querySelectorAll('[data-lavish-question]')]; const status=btn.parentElement.querySelector('[data-lavish-copy-all-status]'); btn.parentElement.querySelector('[data-lavish-copy-all-manual]')?.remove(); const out=[];
+      for (const q of qs){ const key=q.getAttribute('data-lavish-question'); const lines=[]; for (const el of q.querySelectorAll('input, select, textarea')){ if(el.closest('[data-lavish-question]')!==q) continue; const isChoice=el.matches('input[type=checkbox], input[type=radio]'); if(isChoice&&!el.checked) continue; if(el.matches('input[type=button], input[type=submit]')) continue; const v=(el.value||'').trim(); if(!v) continue; lines.push('  '+(el.name||el.tagName.toLowerCase())+': '+v);} if(lines.length) out.push(key+':\n'+lines.join('\n')); }
+      const text=out.join('\n\n'); if(!text){ status.textContent='No answers to copy yet.'; return; }
+      try{ await navigator.clipboard.writeText(text); status.textContent='Answers copied.'; return; }catch{}
+      const man=document.createElement('textarea'); man.value=text; man.readOnly=true; man.rows=8; man.dataset.lavishCopyAllManual=''; btn.insertAdjacentElement('afterend',man); man.select(); status.textContent='Clipboard unavailable. Copy the answers below.';
+    })(this)">Copy all answers</button>
+    <span data-lavish-copy-all-status role="status" aria-live="polite" class="small"></span>
+  </div>
+</section>
+
+<section id="sources">
+  <span class="eyebrow">Sources</span>
+  <h2>Where each claim comes from</h2>
+  <div class="split">
+    <div>
+      <h3>Transcripts (transcript-rag-agent, Chroma <code>raw_transcripts</code>)</h3>
+      <ul class="src">
+        <li><code>1xjB1c00hM4</code> MiniMax H3 Singularity V2 is HERE! | ComfyUI Tutorial — The Ai Blueprint, 28 Oct 2026 (the video you sent)</li>
+        <li><code>rEjasJZq1t8</code> MiniMax H3 is Now Crazy Fast (Free Kaggle Notebook) — AIQUEST, 6 Oct 2026</li>
+        <li><code>uYLdk6Hkq8k</code> MiniMax-H3 just got an Insane Upgrade: SolarRenderer — AIQUEST, 24 Oct 2026</li>
+        <li><code>m3ENCAwWDXc</code> How to Train LoRA in ComfyUI Using Flux — GeekatPlay</li>
+        <li><code>GM70MDyl94E</code> StoryMem · <code>QMlrXTFFbLU</code> LTX 2.5 local · <code>Dfrdf_YhKGM</code> LTX 2.5 Kaggle · <code>rIM4N6CPyho</code> Seedance 2.5 · <code>bNDcnDoqYoo</code> Seedance + Seed Audio · <code>Uqkqn9XQXVo</code> Artfire commercials · <code>e1sJ78nHLDM</code> FlashVSR+ · <code>WIfnA2PGVSY</code> image upscaler — AIQUEST</li>
+      </ul>
+      <p class="cite">Timestamps in this page are mm:ss from each transcript's segment offsets. Plain-text copies with timestamps are in the session scratchpad, not in the repo.</p>
+    </div>
+    <div>
+      <h3>Documents and pages</h3>
+      <ul class="src">
+        <li>Model card: huggingface.co/MiniMaxAI/MiniMax-H3 (architecture, modes, limits, licence form link, prompt guides)</li>
+        <li>ComfyUI docs: docs.comfy.org/tutorials/video/minimax/minimax-h3 (+ <code>-native</code>, <code>-prompt-guide</code>); weights at huggingface.co/Comfy-Org/MiniMax-H3</li>
+        <li>Singularity: huggingface.co/WarmBloodAban/Minimax-h3_Singularity; comfyui-wiki.com news 2026-09-07 and 2026-10-22</li>
+        <li>Turbo LoRAs: pdmd2026.github.io · yzmblog.github.io/projects/DMAD · huggingface.co/MATLOWAI/minimax-h3-fused-turbo-int8-convrot · teamaiq.github.io/h3-lora-comparison</li>
+        <li>SolarRenderer: github.com/Enderfga/SolarRenderer · huggingface.co/Enderfga/SolarRenderer</li>
+        <li>LoRA training: fal.ai/learn/devs/how-to-train-a-lora-for-minimax-h3 · comfyui-wiki.com news 2026-08-03 (AI-Toolkit H3) · github.com/shootthesound/Fizgig</li>
+        <li>Licence coverage (secondary): rits.shanghai.nyu.edu, atlascloud.ai, dev.to write-ups; HF discussion MiniMaxAI/MiniMax-H3/discussions/12</li>
+        <li>VRAM reports (third-party, conflicting): docs.comfy.org sizes; zimaspace, mindstudio, wan2-7.io, comfyui-wiki FreeVideo</li>
+        <li>Pricing: modal.com/pricing (per-second rates, ×3600); fal.ai/docs model table (H3 Max endpoints); Kaggle notebook: github.com/TeamAIQ/Colab-notebooks</li>
+        <li>Modal patterns: tau-telecom-sft/.claude/skills/modal/references/examples/image_to_video.md and music-video-gen.md</li>
+      </ul>
+    </div>
+  </div>
+</section>
+</main>
+</body>
+</html>
