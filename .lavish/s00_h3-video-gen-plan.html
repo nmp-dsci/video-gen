@@ -12,7 +12,8 @@
   td code, li code, p code, dd code{ overflow-wrap:anywhere; }
   td, th{ vertical-align:top; }
   .kv dd code{ white-space:normal; }
-  .stack{ display:grid; gap:var(--s4); }
+  .stack{ display:grid; gap:var(--s4); grid-template-columns:minmax(0,1fr); }
+  .stack > *{ min-width:0; }
   .qa{ display:grid; gap:var(--s3); grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr)); }
   .qa .card{ min-width:0; }
   .qa .card h3{ font-family:var(--serif); font-weight:400; font-size:var(--t1); }
@@ -37,6 +38,7 @@
   .copyrow textarea{ flex-basis:100%; }
   .ms td:first-child{ white-space:nowrap; font-weight:600; }
   .src li{ margin-bottom:var(--s1); overflow-wrap:anywhere; }
+  .lv td:first-child{ font-weight:600; min-width:16ch; }
   @media (max-width:560px){
     .arms td:first-child, .ms td:first-child{ white-space:normal; }
   }
@@ -45,7 +47,7 @@
 <body>
 <main>
 <header>
-  <span class="eyebrow">video-gen · plan s00 · 29 Oct 2026 · branch <code>video-gen-spike</code> · nothing committed yet</span>
+  <span class="eyebrow">video-gen · plan s00 · 29 Oct 2026, updated 31 Oct · branch <code>video-gen-spike</code></span>
   <h1>MiniMax H3 from zero: <em>one harness, four techniques, your first clip this week</em></h1>
   <p class="lede">You asked what MiniMax H3 is, whether people run it in ComfyUI, whether you need to rent a GPU, and how to make videos that remember a character over time. This page answers those from the transcripts in <code>transcript-rag-agent</code> (three H3 videos plus nine on neighbouring tools), the official model card, the ComfyUI docs, and fal and Modal docs. It then lays out the project: a small, reproducible generation harness, a bake-off of four H3 techniques on one fixed brief, and a character LoRA so the same character survives across many clips. The first test costs nothing and can run today.</p>
   <div class="verdict">
@@ -74,7 +76,7 @@
     </div>
     <div class="card">
       <h3>How do the videos remember?</h3>
-      <p>Three layers, cheapest first. Per shot: reference-to-video takes up to 9 images, 3 videos and 3 audio clips of your character. Per project: a LoRA trained on 50–200 clips of that character, loaded into every generation. Across shots: multi-shot prompts inside one 15 s clip, last-frame-to-first-frame chaining, and (today only for Wan 2.2, not H3) StoryMem-style memory banks. Section 4 has the diagram.</p>
+      <p>Three layers, cheapest first. Per shot: reference-to-video takes up to 9 images, 3 videos and 3 audio clips of your character. Per project: a LoRA trained on 50–200 clips of that character, loaded into every generation. Across shots: multi-shot prompts inside one 15 s clip, then a chaining tool such as the H3 Extender to go past 15 s. H3 has no trained memory model like Wan 2.2's StoryMem, so the harness rebuilds StoryMem's keyframe memory out of H3's own reference slots. Section 4 has the diagram.</p>
     </div>
   </div>
 </section>
@@ -84,47 +86,46 @@
   <h2>A video-and-audio model, released as weights, with a hosted top tier kept back</h2>
   <p class="sub">From the model card (<code>MiniMaxAI/MiniMax-H3</code>) and the ComfyUI tutorial, cross-checked against the three transcripts. Nothing here is from memory: the model is newer than my training data.</p>
   <figure class="fig">
-    <svg viewBox="0 0 780 250" width="100%" role="img" aria-labelledby="f1t">
+    <svg viewBox="0 0 780 230" width="100%" role="img" aria-labelledby="f1t">
       <title id="f1t">Inputs, the H3 backbone with its adapters, the output clip, and the post-processing pass</title>
       <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
       <g id="f1-inputs">
         <text x="10" y="18" class="mono muted">INPUTS (any mode)</text>
-        <rect class="box" x="10" y="28" width="170" height="40" rx="6"/><text x="20" y="45">Structured text prompt</text><text x="20" y="60" class="mono muted">shots · dialogue · soundscape</text>
-        <rect class="box" x="10" y="76" width="170" height="40" rx="6"/><text x="20" y="93">First / last frame</text><text x="20" y="108" class="mono muted">fl2va · 0, 1 or 2 images</text>
-        <rect class="box" x="10" y="124" width="170" height="40" rx="6"/><text x="20" y="141">References</text><text x="20" y="156" class="mono muted">ref2va · ≤9 img · 3 video · 3 audio</text>
-        <rect class="box" x="10" y="172" width="170" height="40" rx="6"/><text x="20" y="189">Structure</text><text x="20" y="204" class="mono muted">pose · depth · mesh · skeleton</text>
+        <rect class="box" x="10" y="28" width="190" height="40" rx="6"/><text x="20" y="45">Structured text prompt</text><text x="20" y="60" class="mono muted">shots · dialogue · sound</text>
+        <rect class="box" x="10" y="76" width="190" height="40" rx="6"/><text x="20" y="93">First / last frame</text><text x="20" y="108" class="mono muted">fl2va · 0, 1 or 2 images</text>
+        <rect class="box" x="10" y="124" width="190" height="40" rx="6"/><text x="20" y="141">References · ref2va</text><text x="20" y="156" class="mono muted">≤9 img · 3 video · 3 audio</text>
+        <rect class="box" x="10" y="172" width="190" height="40" rx="6"/><text x="20" y="189">Structure</text><text x="20" y="204" class="mono muted">pose · depth · skeleton</text>
       </g>
-      <path class="edge" d="M180 48 H228"/><path class="edge" d="M180 96 H228"/><path class="edge" d="M180 144 H228"/><path class="edge dash" d="M180 192 H228"/>
+      <path class="edge" d="M200 48 H238"/><path class="edge" d="M200 96 H238"/><path class="edge" d="M200 144 H238"/><path class="edge dash" d="M200 192 H238"/>
       <g id="f1-core">
-        <rect class="core" x="230" y="28" width="230" height="184" rx="8"/>
-        <text x="245" y="50" font-weight="600">MiniMax H3</text><text x="345" y="50" class="mono muted">33B single-stream DiT</text>
-        <rect class="box" x="245" y="62" width="200" height="26" rx="4"/><text x="253" y="79" class="mono">Qwen3-VL-32B text encoder</text>
-        <rect class="box" x="245" y="94" width="96" height="26" rx="4"/><text x="253" y="111" class="mono">video VAE f16t4</text>
-        <rect class="box" x="349" y="94" width="96" height="26" rx="4"/><text x="357" y="111" class="mono">audio VAE 32 kHz</text>
-        <text x="245" y="143" class="mono muted">LOADED ON TOP, PER RUN</text>
-        <rect class="wash" x="245" y="150" width="200" height="22" rx="4"/><text x="253" y="165" class="mono">turbo LoRA · 4 or 8 steps</text>
-        <rect class="wash" x="245" y="176" width="200" height="22" rx="4"/><text x="253" y="191" class="mono">your character / style LoRA</text>
-        <text x="245" y="208" class="mono muted">+ SolarRenderer / ControlNet adapters</text>
+        <rect class="core" x="240" y="28" width="250" height="192" rx="8"/>
+        <text x="255" y="50" font-weight="600">MiniMax H3</text><text x="340" y="50" class="mono muted">33B single-stream DiT</text>
+        <rect class="box" x="255" y="62" width="220" height="26" rx="4"/><text x="263" y="79" class="mono">Qwen3-VL-32B text encoder</text>
+        <rect class="box" x="255" y="94" width="107" height="26" rx="4"/><text x="263" y="111" class="mono">video VAE</text>
+        <rect class="box" x="368" y="94" width="107" height="26" rx="4"/><text x="376" y="111" class="mono">audio VAE</text>
+        <text x="255" y="143" class="mono muted">LOADED ON TOP, PER RUN</text>
+        <rect class="wash" x="255" y="150" width="220" height="22" rx="4"/><text x="263" y="165" class="mono">turbo LoRA · 4 or 8 steps</text>
+        <rect class="wash" x="255" y="176" width="220" height="22" rx="4"/><text x="263" y="191" class="mono">your character / style LoRA</text>
+        <text x="255" y="208" class="mono muted">+ ControlNet / SolarRenderer</text>
       </g>
-      <path class="edge" d="M460 120 H518"/>
+      <path class="edge" d="M490 120 H518"/>
       <g id="f1-out">
-        <rect class="box" x="520" y="76" width="120" height="88" rx="6"/>
+        <rect class="box" x="520" y="76" width="140" height="88" rx="6"/>
         <text x="530" y="96" font-weight="600">One MP4</text>
         <text x="530" y="114" class="mono muted">4–15 s · 24 fps</text>
         <text x="530" y="129" class="mono muted">768 px short edge</text>
-        <text x="530" y="144" class="mono muted">stereo audio + speech</text>
+        <text x="530" y="144" class="mono muted">audio + speech</text>
       </g>
-      <path class="edge dash" d="M640 120 H688"/>
+      <path class="edge dash" d="M660 120 H682"/>
       <g id="f1-post">
-        <rect class="box" x="690" y="76" width="82" height="88" rx="6"/>
-        <text x="700" y="96" font-weight="600">Post</text>
-        <text x="700" y="114" class="mono muted">FlashVSR+</text>
-        <text x="700" y="129" class="mono muted">SeedVR2</text>
-        <text x="700" y="144" class="mono muted">→ 1080p / 4K</text>
+        <rect class="box" x="684" y="76" width="92" height="88" rx="6"/>
+        <text x="694" y="96" font-weight="600">Post</text>
+        <text x="694" y="114" class="mono muted">FlashVSR+</text>
+        <text x="694" y="129" class="mono muted">SeedVR2</text>
+        <text x="694" y="144" class="mono muted">→ 1080p/4K</text>
       </g>
-      <text x="230" y="238" class="mono muted">2K output (H3-Regenerate-2K) and the Context-IR prompt pre-processor were not released: local 2K is an upscale pass.</text>
     </svg>
-    <figcaption>Every mode shares one backbone. The things you will vary in the bake-off are the LoRAs loaded on top, the checkpoint (base or a community fine-tune), and the references you feed in. Dashed arrows are optional.</figcaption>
+    <figcaption>Every mode shares one backbone. The things you will vary in the bake-off are the LoRAs loaded on top, the checkpoint (base or a community fine-tune), and the references you feed in. Dashed arrows are optional. The hosted tier's 2K regeneration (H3-Regenerate-2K) and Context-IR prompt pre-processor were not released, so local 2K is an upscale pass.</figcaption>
   </figure>
   <div class="split">
     <dl class="kv">
@@ -284,41 +285,45 @@ non_diegetic_music: N/A</code></pre>
   <span class="eyebrow">4 · Memory</span>
   <h2>How a character survives from clip to clip, in three layers</h2>
   <figure class="fig">
-    <svg viewBox="0 0 780 232" width="100%" role="img" aria-labelledby="f2t">
-      <title id="f2t">Three layers of consistency: per-shot references, a per-project LoRA, and cross-shot continuity mechanics</title>
+    <svg viewBox="0 0 780 294" width="100%" role="img" aria-labelledby="f2t">
+      <title id="f2t">Three layers of consistency: per-shot references, a per-project LoRA, and cross-shot continuity through clip chaining and a rolling keyframe memory</title>
       <g id="f2-l1">
-        <rect class="box" x="10" y="12" width="500" height="60" rx="6"/>
+        <rect class="box" x="10" y="12" width="500" height="76" rx="6"/>
         <text x="22" y="32" font-weight="600">Per shot · references (ref2va)</text>
-        <text x="22" y="50" class="mono muted">reference sheet as &lt;Picture 1&gt; · voice clip as &lt;Audio 1&gt; · 20–25 steps, no 4-step LoRA</text>
-        <text x="22" y="64" class="mono muted">cost: none beyond the clip · holds identity within one clip; drifts across many</text>
-        <rect class="wash" x="520" y="12" width="250" height="60" rx="6"/>
-        <text x="532" y="32" font-weight="600">M1–M2</text><text x="532" y="50" class="mono muted">needs: one reference sheet</text><text x="532" y="64" class="mono muted">evidence: 1xjB1c00hM4 5:40 two-girl test</text>
+        <text x="22" y="50" class="mono muted">reference sheet as &lt;Picture 1&gt; · voice clip as &lt;Audio 1&gt;</text>
+        <text x="22" y="64" class="mono muted">20–25 steps, no 4-step LoRA · holds identity within one clip</text>
+        <text x="22" y="78" class="mono muted">cost: nothing beyond the clip · drifts across many clips</text>
+        <rect class="wash" x="520" y="12" width="250" height="76" rx="6"/>
+        <text x="532" y="32" font-weight="600">M1–M2</text><text x="532" y="50" class="mono muted">needs: one reference sheet</text><text x="532" y="64" class="mono muted">evidence: 1xjB1c00hM4 5:40</text>
       </g>
-      <path class="edge" d="M260 72 V92"/>
+      <path class="edge" d="M260 88 V108"/>
       <g id="f2-l2">
-        <rect class="core" x="10" y="94" width="500" height="60" rx="6"/>
-        <text x="22" y="114" font-weight="600">Per project · a trained LoRA</text>
-        <text x="22" y="132" class="mono muted">50–200 clips of the character · rank 16 · ~2 h on fal · loaded at scale 1.0 in every run</text>
-        <text x="22" y="146" class="mono muted">cost: dataset work + one training bill · identity persists without the sheet</text>
-        <rect class="wash" x="520" y="94" width="250" height="60" rx="6"/>
-        <text x="532" y="114" font-weight="600">M3</text><text x="532" y="132" class="mono muted">needs: curated clips + captions</text><text x="532" y="146" class="mono muted">evidence: fal 16-run campaign</text>
+        <rect class="core" x="10" y="110" width="500" height="76" rx="6"/>
+        <text x="22" y="130" font-weight="600">Per project · a trained LoRA</text>
+        <text x="22" y="148" class="mono muted">50–200 clips of the character · rank 16 · ~2 h on fal</text>
+        <text x="22" y="162" class="mono muted">loaded at scale 1.0 in every run · identity persists without the sheet</text>
+        <text x="22" y="176" class="mono muted">cost: dataset work + one training bill</text>
+        <rect class="wash" x="520" y="110" width="250" height="76" rx="6"/>
+        <text x="532" y="130" font-weight="600">M3</text><text x="532" y="148" class="mono muted">needs: curated clips + captions</text><text x="532" y="162" class="mono muted">evidence: fal 16-run campaign</text>
       </g>
-      <path class="edge" d="M260 154 V174"/>
+      <path class="edge" d="M260 186 V206"/>
       <g id="f2-l3">
-        <rect class="box" x="10" y="176" width="500" height="50" rx="6"/>
-        <text x="22" y="196" font-weight="600">Across shots · continuity mechanics</text>
-        <text x="22" y="214" class="mono muted">[Shot N] cuts inside one 15 s clip · last frame → next clip's first frame · StoryMem-style memory (Wan 2.2 only today)</text>
-        <rect class="wash" x="520" y="176" width="250" height="50" rx="6"/>
-        <text x="532" y="196" font-weight="600">M4</text><text x="532" y="214" class="mono muted">needs: the two layers above</text>
+        <rect class="box" x="10" y="208" width="500" height="76" rx="6"/>
+        <text x="22" y="228" font-weight="600">Across shots · chaining and memory</text>
+        <text x="22" y="246" class="mono muted">[Shot N] cuts inside one 15 s clip, no tool needed</text>
+        <text x="22" y="260" class="mono muted">past 15 s: H3 Extender carries last frames + 9 shared refs</text>
+        <text x="22" y="274" class="mono muted">harness: rolling keyframe memory, StoryMem's idea on H3</text>
+        <rect class="wash" x="520" y="208" width="250" height="76" rx="6"/>
+        <text x="532" y="228" font-weight="600">M4</text><text x="532" y="246" class="mono muted">needs: the two layers above</text><text x="532" y="260" class="mono muted">evidence: Extender wiki, StoryMem</text>
       </g>
     </svg>
-    <figcaption>Each layer stacks on the one above it. The LoRA is what makes "longitudinal" memory real: it is the only layer that does not have to be re-supplied every generation.</figcaption>
+    <figcaption>Each layer stacks on the one above it. The LoRA is what makes "longitudinal" memory real: it is the only layer that does not have to be re-supplied every generation. The third layer is where StoryMem's idea lands: H3 has no trained memory model, so the harness feeds keyframes from earlier shots back in as references (below).</figcaption>
   </figure>
   <div class="split">
     <div>
       <h3>What the other tools do about it</h3>
       <ul>
-        <li><b>StoryMem</b> (GM70MDyl94E): a 0.7B LoRA on Wan 2.2 14B that keeps "a compact memory bank" of key frames from earlier shots and injects them into the next; 28.7% better cross-shot consistency than base Wan, 9.4% over HoloCine; three weights (t2v, i2v, memory-to-video, which seeds the memory with your reference images); ~16 GB VRAM with an FP8/FP4 backbone. Open source, but it is a Wan technique: H3 has no equivalent yet. Worth an arm only if H3's own continuity fails M4.</li>
+        <li><b>StoryMem</b> (GM70MDyl94E; github.com/Kevin-thu/StoryMem): writes a story shot by shot on Wan 2.2 A14B. After each shot it extracts keyframes automatically into a memory of up to 10 shots, and a 0.7B memory-to-video LoRA conditions the next shot on them; two variants also link neighbouring shots through the first frame or the first 5 motion frames when there is no cut, and your reference images can seed the memory. The video reports 28.7% better consistency than the baseline and 9.4% over HoloCine; ~16 GB VRAM with an FP8/FP4 backbone. Licence: S-Lab License 1.0, <b>non-commercial only</b>. Not related to PDMD (2.1), which is a speed distillation for H3. Nothing trained like it exists for H3; the table below shows what does.</li>
         <li><b>Seedance 2.5</b> (rIM4N6CPyho, bNDcnDoqYoo): hosted only (BytePlus Lumina / fal / Higgsfield); 30 s single renders, "multi-round extensions" to ~2 min, up to 50 references cited in the prompt with <code>@</code>. It is the quality reference in every AIQuest comparison ("Seedance 2.5, which nailed this test"). A fair ceiling arm, not a thing you can own.</li>
         <li><b>LTX 2.5</b> (QMlrXTFFbLU, Dfrdf_YhKGM): open weights (gated), native multi-shot where "lighting, environment, and even the voice hold up across cuts"; 22B distill runs on Kaggle at ~7 GB VRAM but 457 s per 5 s clip at 480p, with a recurring hallucinated extra person. A credible second open model if H3's licence is a problem for you.</li>
       </ul>
@@ -332,6 +337,31 @@ non_diegetic_music: N/A</code></pre>
       </ul>
     </div>
   </div>
+
+  <h3>Past 15 seconds on H3: what exists (checked 31 Oct 2026)</h3>
+  <p class="sub">No trained memory model like StoryMem exists for H3. H3 needs one less: its reference mode already takes up to 9 images, 3 videos and 3 audio clips per generation, which is the input StoryMem had to train Wan 2.2 to accept. Community ComfyUI packs use that to chain clips. None of them picks keyframes from earlier shots by itself: each carries the previous clip plus the references you choose by hand.</p>
+  <div class="tablewrap"><table class="lv">
+    <thead><tr><th>Tool</th><th>What carries into the next clip</th><th>Licence · activity</th><th>Watch out for</th></tr></thead>
+    <tbody>
+      <tr><td>H3 Extender (tritant) <span class="badge rec">rec</span></td><td>"Motion Context": the previous clip's video and audio latents. Up to 9 global reference images in fixed slots for every clip, plus per-clip references (9 images, 3 videos, 3 audio). Can continue an existing video from its final frames.</td><td>Apache-2.0 · 362 stars · pushed 27 Oct</td><td>Its author calls it the "final feature release". Audio joins are work in progress. Changing a clip's settings invalidates it and every clip after it. No VRAM figures.</td></tr>
+      <tr><td>MiniMaxH3-Easy · Context Segments (nkxx188)</td><td>The previous segment, through one of four continuity modes (latent guide is the suggested start). Up to 30 segments split by <code>---</code>; a library of 27 images, 9 videos and 9 audio files.</td><td>MIT · 879 stars · pushed 26 Oct</td><td>References are not inherited: repeat each <code>@</code> reference in every segment that needs it. No caching between queues. The prompt helper stores API keys in plain text in <code>prompt_optimizer.json</code>.</td></tr>
+      <tr><td>Timeline Director (Songssx)</td><td>The latent tail of the previous segment, for one long continuous shot. A low-memory sampler writes each segment to disk and joins them.</td><td>GPL-3.0 · 728 stars · pushed 21 Oct</td><td>No identity mechanism; segments are placed by hand on a timeline. Creator-reported: 29 s at 1536×832 in about 10 min, hardware not named.</td></tr>
+      <tr><td>RunComfy Motion Context V2</td><td>The last frames of segment N into segment N+1, with one shared reference image for identity.</td><td>Hosted workflow</td><td>Built for one unbroken take, not cuts. Joins can show seams or jitter.</td></tr>
+    </tbody>
+  </table></div>
+  <p class="small">Read and left out: <b>H3-LongVideos</b> (huggingface.co/Smite79/MiniMax-H3-Longvideos) also turns one prompt into chained shots, but it is built around adult content and its licence is named "no-redistribution". <b>VideoMemory</b> (arXiv 2601.03655, Jan 2026) keeps separate memories for characters, props and backgrounds; the paper names no base model and no code release is confirmed.</p>
+
+  <h3>The memory loop the harness adds: StoryMem's idea, rebuilt with H3 references</h3>
+  <div class="steps">
+    <div class="step"><b>Seed the memory.</b> Shot 1 runs with the character sheet in fixed reference slots, the way the Extender's global references work, plus the character LoRA once M3 has produced one.<span class="tag">shot 1</span></div>
+    <div class="step"><b>Harvest after every shot.</b> Keep one or two frames where the character is clearly visible, chosen by the identity score from section 8, and store them under the shot id.<span class="tag">automatic, no hand-picking</span></div>
+    <div class="step"><b>Fill the next shot's slots.</b> Sheet first, then the newest memory frames. When all 9 image slots are full, the oldest memory frame drops out. StoryMem remembers up to 10 shots; H3's ceiling is 9 images, sheet included.<span class="tag">rolling window</span></div>
+    <div class="step"><b>Continuation or cut.</b> If the next shot continues the scene, pass the last frames as motion context through the Extender. On a hard cut, skip that and rely on the memory frames alone.<span class="tag">per shot, from the brief</span></div>
+    <div class="step"><b>Record the memory.</b> The memory state goes into the job record with the hash of every reference, so any shot can be re-rendered with exactly the memory it had (rule 1).<span class="tag">reproducible</span></div>
+  </div>
+  <div class="callout">
+    <p><b>How M4 tests it.</b> One six-shot story, same seeds, three ways: the Extender with the sheet only; the Extender plus the memory loop; and the memory loop plus the M3 LoRA. The identity score per shot decides which one stays. StoryMem itself stays out of the bake-off: it would add Wan 2.2 as a second model, and its licence is non-commercial. It comes in as a research control only if all three H3 runs drift.</p>
+  </div>
 </section>
 
 <section id="harness">
@@ -339,19 +369,19 @@ non_diegetic_music: N/A</code></pre>
   <h2>One job record, three providers, everything cached and logged</h2>
   <p class="sub">This is the <code>src/video_gen/</code> that AGENTS.md sketches, made concrete. It keeps rules 1–4: every clip reproducible from its record, every paid call cached, cost known before it is spent, one module for every generation call.</p>
   <figure class="fig">
-    <svg viewBox="0 0 780 170" width="100%" role="img" aria-labelledby="f3t">
+    <svg viewBox="0 0 780 182" width="100%" role="img" aria-labelledby="f3t">
       <title id="f3t">Pipeline from brief to review page</title>
-      <g id="f3-brief"><rect class="box" x="10" y="40" width="110" height="52" rx="6"/><text x="20" y="60" font-weight="600">brief.yaml</text><text x="20" y="76" class="mono muted">shots · character</text><text x="20" y="88" class="mono muted">seeds · arms</text></g>
-      <path class="edge" d="M120 66 H148"/>
-      <g id="f3-prompt"><rect class="box" x="150" y="40" width="120" height="52" rx="6"/><text x="160" y="60" font-weight="600">prompt builder</text><text x="160" y="76" class="mono muted">H3 structured format</text><text x="160" y="88" class="mono muted">+ bible sentence</text></g>
-      <path class="edge" d="M270 66 H298"/>
-      <g id="f3-job"><rect class="core" x="300" y="30" width="130" height="72" rx="6"/><text x="310" y="50" font-weight="600">job → cache key</text><text x="310" y="66" class="mono muted">model · loras · prompt</text><text x="310" y="80" class="mono muted">seed · res · frames · steps</text><text x="310" y="94" class="mono muted">hit? → no spend</text></g>
-      <path class="edge" d="M430 66 H458"/>
-      <g id="f3-prov"><rect class="box" x="460" y="18" width="120" height="96" rx="6"/><text x="470" y="38" font-weight="600">provider</text><text x="470" y="56" class="mono">modal · ComfyUI API</text><text x="470" y="72" class="mono">fal · HTTP</text><text x="470" y="88" class="mono">kaggle · import</text><text x="470" y="106" class="mono muted">cost cap per run</text></g>
-      <path class="edge" d="M580 66 H608"/>
-      <g id="f3-out"><rect class="box" x="610" y="40" width="160" height="52" rx="6"/><text x="620" y="60" font-weight="600">outputs/ + MLflow run</text><text x="620" y="76" class="mono muted">video-gen/bakeoff</text><text x="620" y="88" class="mono muted">params · cost · path · scores</text></g>
-      <path class="edge" d="M690 92 V120"/>
-      <g id="f3-judge"><rect class="box" x="530" y="122" width="240" height="40" rx="6"/><text x="540" y="140" font-weight="600">judge</text><text x="580" y="140" class="mono muted">blind pairwise page (you) · optional VLM score</text><text x="540" y="156" class="mono muted">→ .lavish/s01 results</text></g>
+      <g id="f3-brief"><rect class="box" x="10" y="24" width="120" height="88" rx="6"/><text x="20" y="44" font-weight="600">brief.yaml</text><text x="20" y="62" class="mono muted">shots · seeds</text><text x="20" y="76" class="mono muted">character, arms</text></g>
+      <path class="edge" d="M130 68 H146"/>
+      <g id="f3-prompt"><rect class="box" x="148" y="24" width="128" height="88" rx="6"/><text x="158" y="44" font-weight="600">prompt builder</text><text x="158" y="62" class="mono muted">H3 fields</text><text x="158" y="76" class="mono muted">+ bible sentence</text></g>
+      <path class="edge" d="M276 68 H292"/>
+      <g id="f3-job"><rect class="core" x="294" y="24" width="138" height="88" rx="6"/><text x="304" y="44" font-weight="600">job → cache key</text><text x="304" y="62" class="mono muted">model · loras</text><text x="304" y="76" class="mono muted">prompt · seed</text><text x="304" y="90" class="mono muted">frames · steps</text><text x="304" y="104" class="mono muted">hit? → no spend</text></g>
+      <path class="edge" d="M432 68 H448"/>
+      <g id="f3-prov"><rect class="box" x="450" y="24" width="150" height="88" rx="6"/><text x="460" y="44" font-weight="600">provider</text><text x="460" y="62" class="mono">modal · ComfyUI API</text><text x="460" y="76" class="mono">fal · HTTP</text><text x="460" y="90" class="mono">kaggle · import</text><text x="460" y="104" class="mono muted">cost cap per run</text></g>
+      <path class="edge" d="M600 68 H616"/>
+      <g id="f3-out"><rect class="box" x="618" y="24" width="152" height="88" rx="6"/><text x="628" y="44" font-weight="600">outputs/ + MLflow</text><text x="628" y="62" class="mono muted">video-gen/bakeoff</text><text x="628" y="76" class="mono muted">params · cost</text><text x="628" y="90" class="mono muted">path · scores</text></g>
+      <path class="edge" d="M694 112 V128"/>
+      <g id="f3-judge"><rect class="box" x="470" y="130" width="300" height="44" rx="6"/><text x="480" y="148" font-weight="600">judge</text><text x="525" y="148" class="mono muted">blind pairwise page (you)</text><text x="480" y="164" class="mono muted">optional VLM score → .lavish/s01</text></g>
     </svg>
     <figcaption>A Kaggle clip enters at the same job record as a Modal clip: <code>vg import</code> takes the downloaded MP4 plus the metadata the notebook saves under the player, and files it like any other run.</figcaption>
   </figure>
@@ -407,7 +437,7 @@ ai_specs/          s01_first-test.md (this page's decisions)</code></pre>
       <tr><td>M1 · first clip</td><td>Licence check; Kaggle run of the Mara brief through PDMD, DMAD, Fused and the official model at one seed; <code>vg import</code>; <code>.lavish/s01</code> with the four clips side by side and your scores</td><td>Four clips with full records, a one-line verdict per arm, and you have seen a face melt at 480p</td><td>$0</td></tr>
       <tr><td>M2 · harness + bake-off</td><td><code>jobs</code>, <code>cache</code>, <code>prompts/h3</code>, the <code>modal</code> provider (ComfyUI headless), the <code>fal</code> provider, MLflow, <code>vg bakeoff</code>; four arms × six prompts × two seeds; blind pairwise judge page</td><td>48 clips logged with cost; rubric scored; one arm chosen by numbers; registry entry + <code>vg smoke</code> green</td><td>≈ $5–15 Modal + the hosted reference clips</td></tr>
       <tr><td>M3 · character LoRA</td><td>Character bible; 60–100 generated clips through the winning arm + ref2va, hand-reviewed and captioned at 24.000 fps; fal <code>t2v</code> trainer (rank 16, 1,500–3,000 steps); same-seed A/B at scale 0 vs 1 over ten prompts</td><td>Identity score with the LoRA beats references-only on the same seeds, and holds in a wide shot</td><td>One training run (per-step rate on fal) + ≈ 100 clips</td></tr>
-      <tr><td>M4 · continuity</td><td>Multi-shot briefs, last-frame chaining, FlashVSR+ or SeedVR2 pass, a 45–60 s piece; optional SolarRenderer arm for choreography</td><td>A 45 s story with the identity score holding across every cut, at 720p or better</td><td>≈ $10–30</td></tr>
+      <tr><td>M4 · continuity</td><td>Multi-shot briefs; the H3 Extender for chaining (motion context plus 9 shared reference slots); the harness's rolling keyframe memory (section 4); the same six-shot story three ways at the same seeds: sheet only, memory loop, memory loop + LoRA; FlashVSR+ or SeedVR2 pass; a 45–60 s piece; optional SolarRenderer arm for choreography</td><td>A 45 s story with the identity score holding across every cut, at 720p or better, and the three-way comparison has picked the memory setup to keep</td><td>≈ $10–30</td></tr>
       <tr><td>M5 · showcase</td><td>Best outputs and the method as a portfolio page; <code>showcase.yaml</code> like the siblings</td><td>Published, with the cost per finished second stated</td><td>—</td></tr>
     </tbody>
   </table></div>
@@ -486,6 +516,7 @@ ai_specs/          s01_first-test.md (this page's decisions)</code></pre>
     <div class="card"><h3>Kaggle quota and tooling drift</h3><p>The notebook is one creator's; "I recently combed through and patched several older tools that had broken." It is M1's tool, not M2's: the harness never depends on it.</p></div>
     <div class="card"><h3>Likeness and rights</h3><p>Original characters only (rule 6). Reference audio for a voice must be yours or licensed. Generated media stays out of git except curated samples.</p></div>
     <div class="card"><h3>Hosted H3 Max ≠ open H3</h3><p>The hosted tier has Context-IR pre-processing and 2K regeneration; the open weights do not. Arm R is a ceiling, and the gap it shows is partly those two components, not only the weights.</p></div>
+    <div class="card"><h3>Long-form tools are one person's code</h3><p>The Extender's author calls it the "final feature release", and its audio joins are unfinished; the other chaining packs changed weekly in October. The harness pins each pack to a commit and owns the memory loop itself, so a pack can be swapped without losing the method. StoryMem's S-Lab licence is non-commercial, so it can only ever be a research control.</p></div>
   </div>
 </section>
 
@@ -584,6 +615,8 @@ ai_specs/          s01_first-test.md (this page's decisions)</code></pre>
         <li>Singularity: huggingface.co/WarmBloodAban/Minimax-h3_Singularity; comfyui-wiki.com news 2026-09-07 and 2026-10-22</li>
         <li>Turbo LoRAs: pdmd2026.github.io · yzmblog.github.io/projects/DMAD · huggingface.co/MATLOWAI/minimax-h3-fused-turbo-int8-convrot · teamaiq.github.io/h3-lora-comparison</li>
         <li>SolarRenderer: github.com/Enderfga/SolarRenderer · huggingface.co/Enderfga/SolarRenderer</li>
+        <li>Long video on H3 (read 31 Oct 2026): github.com/tritant/ComfyUI_MiniMax_H3_Extender (wiki) · github.com/nkxx188/ComfyUI-MiniMaxH3-Easy and comfy.icu/node/MiniMaxH3EasyContextSegments · github.com/Songssx/ComfyUI-MiniMaxH3-TimelineDirector (wiki) · runcomfy.com/comfyui-workflows/minimax-h3-long-video-in-comfyui · huggingface.co/Smite79/MiniMax-H3-Longvideos (read, left out); licences, stars and push dates from the GitHub API</li>
+        <li>StoryMem: github.com/Kevin-thu/StoryMem (README; LICENSE.md is S-Lab License 1.0) · arxiv.org/abs/2512.19539 · VideoMemory: arxiv.org/abs/2601.03655</li>
         <li>LoRA training: fal.ai/learn/devs/how-to-train-a-lora-for-minimax-h3 · comfyui-wiki.com news 2026-08-03 (AI-Toolkit H3) · github.com/shootthesound/Fizgig</li>
         <li>Licence coverage (secondary): rits.shanghai.nyu.edu, atlascloud.ai, dev.to write-ups; HF discussion MiniMaxAI/MiniMax-H3/discussions/12</li>
         <li>VRAM reports (third-party, conflicting): docs.comfy.org sizes; zimaspace, mindstudio, wan2-7.io, comfyui-wiki FreeVideo</li>
