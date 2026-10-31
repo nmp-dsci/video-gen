@@ -38,9 +38,16 @@
   .copyrow textarea{ flex-basis:100%; }
   .ms td:first-child{ white-space:nowrap; font-weight:600; }
   .src li{ margin-bottom:var(--s1); overflow-wrap:anywhere; }
-  .lv td:first-child{ font-weight:600; min-width:16ch; }
+  .lv td:first-child, .kinds td:first-child{ font-weight:600; min-width:16ch; }
   @media (max-width:560px){
     .arms td:first-child, .ms td:first-child{ white-space:normal; }
+    /* narrow screens: each row becomes a block, each cell labelled by its data-label */
+    table.stackable, table.stackable tbody, table.stackable tr, table.stackable td{ display:block; }
+    table.stackable thead{ display:none; }
+    table.stackable tr{ padding:var(--s2) 0; border-bottom:1px solid var(--line); }
+    table.stackable tr:last-child{ border-bottom:0; }
+    table.stackable td{ border-bottom:0; padding:var(--s1) var(--s3); }
+    table.stackable td[data-label]::before{ content:attr(data-label); display:block; font-size:var(--t-2); font-weight:600; text-transform:uppercase; letter-spacing:var(--track-label); color:var(--muted); }
   }
 </style>
 </head>
@@ -52,7 +59,7 @@
   <p class="lede">You asked what MiniMax H3 is, whether people run it in ComfyUI, whether you need to rent a GPU, and how to make videos that remember a character over time. This page answers those from the transcripts in <code>transcript-rag-agent</code> (three H3 videos plus nine on neighbouring tools), the official model card, the ComfyUI docs, and fal and Modal docs. It then lays out the project: a small, reproducible generation harness, a bake-off of four H3 techniques on one fixed brief, and a character LoRA so the same character survives across many clips. The first test costs nothing and can run today.</p>
   <div class="verdict">
     <div class="stat"><div class="n">33B</div><div class="l">open-weight model that generates video <b>and</b> its audio: 4–15 s, 24 fps, 768 px short edge, dialogue spoken in the clip (model card)</div></div>
-    <div class="stat accent"><div class="n">$0</div><div class="l">for the first clips: AIQuest's Kaggle notebook on two free T4s renders a 5 s clip at 480p in about 3 minutes with a 4-step LoRA (rEjasJZq1t8 17:45)</div></div>
+    <div class="stat accent"><div class="n">$0</div><div class="l">for the first clips: AIQuest's Kaggle notebook on two free T4s renders a 5 s clip at 480p in about 3 minutes with a 4-step speed LoRA (rEjasJZq1t8 17:45)</div></div>
     <div class="stat"><div class="n">4 + 1</div><div class="l">techniques in the bake-off plus one hosted reference arm; about 50 clips, roughly $5–15 on Modal (estimate, inside the $30 monthly credit)</div></div>
     <div class="stat amber"><div class="n">Licence</div><div class="l">H3's community licence excludes the US, EU, UK and South Korea, and reportedly covers outputs too. Confirm where you stand before anything else (decision Q1)</div></div>
   </div>
@@ -72,7 +79,7 @@
     </div>
     <div class="card">
       <h3>How are people using MiniMax?</h3>
-      <p>Three ways. (1) Hosted: the H3 Max API on fal or MiniMax's platform, no setup, commercial rights included. (2) Open weights in ComfyUI: pruned INT8 builds plus 4- or 8-step turbo LoRAs so a 16–24 GB card can play. (3) Community layers on top: fine-tuned checkpoints (Singularity), adapters (SolarRenderer, Fun ControlNet Union) and custom LoRAs trained on their own clips.</p>
+      <p>Three ways. (1) Hosted: the H3 Max API on fal or MiniMax's platform, no setup, commercial rights included. (2) Open weights in ComfyUI: pruned INT8 builds plus 4- or 8-step turbo LoRAs so a 16–24 GB card can play. (3) Community layers on top: fine-tuned checkpoints (Singularity), adapters that steer motion (SolarRenderer turns a skeleton, a rough 3D scene or a drawing into a finished clip that moves the same way; Fun ControlNet Union does it from pose or depth video; see 2.4) and custom LoRAs trained on their own clips.</p>
     </div>
     <div class="card">
       <h3>How do the videos remember?</h3>
@@ -104,7 +111,7 @@
         <rect class="box" x="255" y="94" width="107" height="26" rx="4"/><text x="263" y="111" class="mono">video VAE</text>
         <rect class="box" x="368" y="94" width="107" height="26" rx="4"/><text x="376" y="111" class="mono">audio VAE</text>
         <text x="255" y="143" class="mono muted">LOADED ON TOP, PER RUN</text>
-        <rect class="wash" x="255" y="150" width="220" height="22" rx="4"/><text x="263" y="165" class="mono">turbo LoRA · 4 or 8 steps</text>
+        <rect class="wash" x="255" y="150" width="220" height="22" rx="4"/><text x="263" y="165" class="mono">speed LoRA: 25 steps → 4 or 8</text>
         <rect class="wash" x="255" y="176" width="220" height="22" rx="4"/><text x="263" y="191" class="mono">your character / style LoRA</text>
         <text x="255" y="208" class="mono muted">+ ControlNet / SolarRenderer</text>
       </g>
@@ -125,7 +132,7 @@
         <text x="694" y="144" class="mono muted">→ 1080p/4K</text>
       </g>
     </svg>
-    <figcaption>Every mode shares one backbone. The things you will vary in the bake-off are the LoRAs loaded on top, the checkpoint (base or a community fine-tune), and the references you feed in. Dashed arrows are optional. The hosted tier's 2K regeneration (H3-Regenerate-2K) and Context-IR prompt pre-processor were not released, so local 2K is an upscale pass.</figcaption>
+    <figcaption>Every mode shares one backbone. A step is one pass of the whole 33B model over the clip: H3 starts from noise and cleans it up a little on each pass. The base model needs 20–25 steps; a speed (turbo) LoRA is trained to get there in 4 or 8, so a clip renders about 3–6× faster for a little quality (2.1). The things you will vary in the bake-off are the LoRAs loaded on top, the checkpoint (base or a community fine-tune), and the references you feed in. Dashed arrows are optional. The hosted tier's 2K regeneration (H3-Regenerate-2K) and Context-IR prompt pre-processor were not released, so local 2K is an upscale pass.</figcaption>
   </figure>
   <div class="split">
     <dl class="kv">
@@ -206,18 +213,30 @@
 
     <div class="card">
       <h3>2.4 · Structure control: Fun ControlNet Union and SolarRenderer</h3>
-      <p>Two ways to dictate <i>motion</i> rather than describe it. Fun ControlNet Union 2.0 (ComfyUI 0.38+) takes Canny, Depth, HED, MLSD or Pose control video and masked inpainting. SolarRenderer (uYLdk6Hkq8k) goes further: a control adapter plus a 4-step adapter on the frozen 33B backbone, "any structure in, any world out".</p>
+      <p>Two ways to dictate <i>motion</i> rather than describe it. Fun ControlNet Union 2.0 (ComfyUI 0.38+) takes Canny, Depth, HED, MLSD or Pose control video and masked inpainting. SolarRenderer (uYLdk6Hkq8k) goes further: "any structure in, any world out". You give it the motion as a rough video (a Mixamo skeleton, a 3D body mesh, moving boxes, an animated child's drawing), a prompt and, optionally, a starting frame (0:08). It renders a finished H3 clip that follows "the choreography from the reference instead of making up a new dance that vaguely fits the prompt" (1:44). Inside, it is two adapters on the frozen 33B backbone. One lines each structure frame up with the output frame it describes, "like putting the right animation drawing under the right frame on a light table" (8:59); the other is a 4-step speed adapter.</p>
       <ul>
         <li>16 structure types in its evaluation, 11 unseen in training: skeletons, meshes, depth, normal maps, voxels, moving boxes, children's drawings (1:15).</li>
         <li>4-step version samples ~12.3× faster than its 50-step control model; Elo 1,510 vs 1,410 (Lin Real Omni) and 1,189 (ControlNet Union), Gemini as judge plus a blind human check (0:34–1:05).</li>
         <li>Real-time: gameplay re-rendered as a stream about 1.1 s behind the input (7:21).</li>
         <li>"The documented low-memory ComfyUI workflow targets a 16 GB GPU using 8-bit models and offloading" (9:54). Code Apache-2.0; weights under the H3 community licence.</li>
-        <li>Use for you: lock choreography with a Mixamo skeleton once, then re-skin the same move as astronaut, armour or ink (5:25), the "character concept" test he calls out.</li>
+        <li>It controls motion and layout, not identity: "a box by itself doesn't tell you what object it should become" (2:45). Who the character is still comes from the prompt, a starting frame or a LoRA.</li>
+        <li>"A rough reference can contribute to a rough result" (4:15): the upside-down pose in the four-person dance came out less smooth.</li>
+        <li>Use for you: lock choreography with a Mixamo skeleton once, then re-skin the same move as astronaut, armour or ink (5:25), the "character concept" test he calls out. Here that is bake-off arm S, probably at M4: the motion from a skeleton, Mara from a starting frame. Whether a character LoRA stacks with its adapters is untested.</li>
       </ul>
     </div>
 
     <div class="card">
       <h3>2.5 · A custom LoRA: the character that survives the whole project</h3>
+      <p><b>What a LoRA is.</b> A small file of learned adjustments that loads on top of the frozen 33B model for one run, at a strength (scale) you choose. Scale 0 switches it off, and the base model never changes. Two kinds appear in this plan, and only one of them is about your character. Pictures of the character are a third thing, and they need no LoRA at all:</p>
+      <div class="tablewrap"><table class="kinds stackable">
+        <thead><tr><th>Thing</th><th>What you give it</th><th>When</th><th>What it buys</th></tr></thead>
+        <tbody>
+          <tr><td>Speed (turbo) LoRA (2.1)</td><td data-label="What you give it">Nothing: download one (PDMD, DMAD, the official turbo) and load it</td><td data-label="When">Every run</td><td data-label="What it buys">4–8 steps instead of 20–25. It knows nothing about your character, and it weakens references a little</td></tr>
+          <tr><td>Reference images (2.3)</td><td data-label="What you give it">Up to 9 pictures and a voice clip, tagged in the prompt</td><td data-label="When">Every run</td><td data-label="What it buys">Identity within one clip, with no training; it drifts across many clips</td></tr>
+          <tr><td>Character LoRA (this card)</td><td data-label="What you give it">10+ short <b>video clips</b> of the character (50–200 best), each with a one-paragraph caption</td><td data-label="When">Once, to train it: about 1.5 h and $10 for 2,000 steps on fal's t2v trainer. After that, every run loads the file at scale 1.0 and the prompt carries its trigger word</td><td data-label="What it buys">The character without showing a picture, across the whole project</td></tr>
+        </tbody>
+      </table></div>
+      <p><b>Clips, not stills.</b> fal's t2v, i2v and ref2va trainers all reject a zip of images, or a zip that mixes images and video. Pictures go in only through the ref2va trainer, as up to four reference files beside each clip (<code>clip01.ref_1.png</code> to <code>ref_4</code>); a clip without them is trained against one of its own frames. Inline Studio's trainer (v1.2.62 on) is the one that learns from stills: it "trains on still images, and the adapter applies to video", so it learns the look but not motion or voice, and it fits a 16 GB card from v1.2.63. For a new character, then: draw the sheet, let ref2va turn it into clips, and train on the clips (the last paragraph of this card).</p>
       <p>H3 LoRAs are trainable today. fal runs four trainers (<code>minimax/h3/t2v/trainer</code>, <code>i2v</code>, <code>flf2v</code>, <code>ref2va</code>); Ostris AI-Toolkit added a <code>minimax_h3</code> extension on 3 Aug 2026 (RunComfy hosts it); Fizgig lists H3 too. One dated blog says H3 cannot be LoRA-trained; the trainer docs and fal's published 16-run campaign say otherwise. The recipe below is fal's, with the ComfyUI Flux LoRA video (m3ENCAwWDXc) as the image-side cross-check.</p>
       <div class="tablewrap"><table>
         <thead><tr><th>Setting</th><th>fal's H3 recipe</th><th>Why</th></tr></thead>
@@ -227,7 +246,7 @@
           <tr><td>Trigger</td><td><code>trigger_phrase</code> in the trainer <i>or</i> baked into captions, never both</td><td>Duplication "degrades prompt adherence"</td></tr>
           <tr><td>Rank · LR · steps</td><td>Rank 16 beat 32 and 64 for a realism adapter; LR 2e-4 (1e-4 "slow-cook"); 1,500 steps on 53 clips, 3,000+ on 176; best run rank 16, 5,000 steps, 1e-4, 176 clips</td><td>Scale steps with clips; run a 1,000-step test before a sweep</td></tr>
           <tr><td>Frames</td><td>73 frames per training sample (<code>frames % 17 == 5</code>), 24 fps, resolution <code>medium</code> (<code>high</code> showed no gain at 768p)</td><td>Same frame grid as inference</td></tr>
-          <tr><td>Time</td><td>~1.5 h (2,000 steps) to ~2.5 h (5,000 steps) on fal; billed per step, rate on the model page</td><td>Flux image LoRA: 36 images at 1024, defaults, "almost 5 hours" on a 24 GB 3090</td></tr>
+          <tr><td>Time</td><td>~1.5 h (2,000 steps) to ~2.5 h (5,000 steps) on fal; per step $0.005 (t2v), $0.01 (i2v), $0.015 (ref2va), so 2,000 steps is $10–30</td><td>Flux image LoRA: 36 images at 1024, defaults, "almost 5 hours" on a 24 GB 3090</td></tr>
           <tr><td>Judging</td><td>Same-seed A/B, <code>scale 0</code> vs <code>scale 1</code>, across many prompts; scale 1.0 intended, 0.6–0.8 lighter</td><td>"Don't judge on one generation, since different weights change composition"; archive the <code>.safetensors</code>, CDN links expire</td></tr>
         </tbody>
       </table></div>
@@ -617,7 +636,7 @@ ai_specs/          s01_first-test.md (this page's decisions)</code></pre>
         <li>SolarRenderer: github.com/Enderfga/SolarRenderer · huggingface.co/Enderfga/SolarRenderer</li>
         <li>Long video on H3 (read 31 Oct 2026): github.com/tritant/ComfyUI_MiniMax_H3_Extender (wiki) · github.com/nkxx188/ComfyUI-MiniMaxH3-Easy and comfy.icu/node/MiniMaxH3EasyContextSegments · github.com/Songssx/ComfyUI-MiniMaxH3-TimelineDirector (wiki) · runcomfy.com/comfyui-workflows/minimax-h3-long-video-in-comfyui · huggingface.co/Smite79/MiniMax-H3-Longvideos (read, left out); licences, stars and push dates from the GitHub API</li>
         <li>StoryMem: github.com/Kevin-thu/StoryMem (README; LICENSE.md is S-Lab License 1.0) · arxiv.org/abs/2512.19539 · VideoMemory: arxiv.org/abs/2601.03655</li>
-        <li>LoRA training: fal.ai/learn/devs/how-to-train-a-lora-for-minimax-h3 · comfyui-wiki.com news 2026-08-03 (AI-Toolkit H3) · github.com/shootthesound/Fizgig</li>
+        <li>LoRA training: fal.ai/learn/devs/how-to-train-a-lora-for-minimax-h3 · fal.ai/models/minimax/h3/{t2v,i2v,ref2va}/trainer/api (dataset rules, sidecars, defaults, per-step price) · comfyui-wiki.com news 2026-08-03 (AI-Toolkit H3) · github.com/shootthesound/Fizgig · github.com/inlineresearch/Inline-Studio/releases v1.2.62 and v1.2.64 (still-image H3 trainer)</li>
         <li>Licence coverage (secondary): rits.shanghai.nyu.edu, atlascloud.ai, dev.to write-ups; HF discussion MiniMaxAI/MiniMax-H3/discussions/12</li>
         <li>VRAM reports (third-party, conflicting): docs.comfy.org sizes; zimaspace, mindstudio, wan2-7.io, comfyui-wiki FreeVideo</li>
         <li>Pricing: modal.com/pricing (per-second rates, ×3600); fal.ai/docs model table (H3 Max endpoints); Kaggle notebook: github.com/TeamAIQ/Colab-notebooks</li>
