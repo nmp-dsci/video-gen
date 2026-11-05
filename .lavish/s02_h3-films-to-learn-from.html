@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en" data-lavish-annotate="on">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>video-gen · s02 · H3 films to learn from</title>
+<link rel="stylesheet" href="house.css">
+<link rel="stylesheet" href="project.css">
+<style>
+  /* layout helpers only: every colour is a house token */
+  th{ white-space:nowrap; }
+  td code, li code, p code, dd code{ overflow-wrap:anywhere; }
+  .card h3{ display:flex; gap:var(--s2); align-items:center; flex-wrap:wrap; }
+  .card .kv{ margin:var(--s3) 0; }
+  .card p{ font-size:var(--t-1); }
+  .card p.links{ margin:0; }
+  .step p{ margin:var(--s1) 0 0; font-size:var(--t-1); }
+  .legend{ display:flex; gap:var(--s2) var(--s5); flex-wrap:wrap; align-items:center; font-size:var(--t-1); color:var(--muted); margin:0 0 var(--s3); }
+  .legend .cols{ flex-basis:100%; font-size:var(--t-2); }
+  .dot{ display:inline-block; width:12px; height:12px; border-radius:50%; border:2px solid var(--accent); vertical-align:-1px; }
+  .dot.full{ background:var(--accent); }
+  .matrix th:not(:first-child), .matrix td:not(:first-child){ text-align:center; }
+  .matrix td:first-child{ color:var(--ink); font-weight:600; }
+  .matrix td:first-child .tag{ display:block; font-weight:400; }
+  .matrix tr.grp td{ background:var(--band); color:var(--muted); font-family:var(--mono); font-size:var(--t-2); font-weight:600; text-transform:uppercase; letter-spacing:var(--track-label); text-align:left; }
+  .pipes td:first-child{ color:var(--ink); font-weight:600; min-width:16ch; }
+  .pipes td:first-child .tag{ display:block; font-weight:400; }
+  .calc{ font-family:var(--mono); font-size:var(--t-1); color:var(--ink); line-height:var(--lh-snug); }
+  .src h3{ margin-top:var(--s5); }
+  .src li{ margin-bottom:var(--s1); overflow-wrap:anywhere; }
+  form.q-form{ margin:0; }
+  form.q-form label{ display:block; padding:var(--s1) 0; }
+  form.q-form label input{ accent-color:var(--accent); }
+  form.q-form input[type=text]{ width:100%; box-sizing:border-box; font:inherit; font-size:var(--t-1); padding:var(--s1) var(--s2); border:1px solid var(--line-2); border-radius:4px; background:var(--bg); color:var(--ink); }
+  form.q-form .row{ display:flex; gap:var(--s3); align-items:center; flex-wrap:wrap; margin-top:var(--s2); }
+  .copyrow{ margin-top:var(--s4); display:flex; gap:var(--s3); align-items:center; flex-wrap:wrap; }
+  .copyrow textarea{ flex-basis:100%; }
+  @media (max-width:760px){
+    /* the coverage map: each row becomes a block, each mark labelled by its stage */
+    table.matrix, table.matrix tbody, table.matrix tr{ display:block; }
+    table.matrix thead{ display:none; }
+    table.matrix tr{ padding:var(--s2) var(--s3); border-bottom:1px solid var(--line); }
+    table.matrix tr:last-child{ border-bottom:0; }
+    table.matrix td{ border-bottom:0; padding:0; }
+    table.matrix td:first-child{ display:block; margin-bottom:var(--s1); }
+    table.matrix td:not(:first-child){ display:inline-flex; gap:var(--s1); align-items:center; margin:0 var(--s3) var(--s1) 0; font-size:var(--t-2); color:var(--muted); }
+    table.matrix td:not(:first-child)::before{ content:attr(data-label); }
+    table.matrix td:empty{ display:none; }
+    table.matrix tr.grp{ background:var(--band); }
+    table.matrix tr.grp td{ display:block; background:none; margin:0; }
+  }
+  @media (max-width:560px){
+    /* narrow screens: each row becomes a block, each cell labelled by its data-label */
+    table.stackable, table.stackable tbody, table.stackable tr, table.stackable td{ display:block; }
+    table.stackable thead{ display:none; }
+    table.stackable tr{ padding:var(--s2) 0; border-bottom:1px solid var(--line); }
+    table.stackable tr:last-child{ border-bottom:0; }
+    table.stackable td{ border-bottom:0; padding:var(--s1) var(--s3); }
+    table.stackable td[data-label]::before{ content:attr(data-label); display:block; font-size:var(--t-2); font-weight:600; text-transform:uppercase; letter-spacing:var(--track-label); color:var(--muted); }
+    .pipes td:first-child{ min-width:0; }
+  }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <span class="eyebrow">video-gen · research s02 · 5 Nov 2026 · branch <code>video-gen-spike</code> · for the 5-minute goal</span>
+  <h1>Nobody has written up a 5-minute H3 film yet. <em>Three long ones show the way.</em></h1>
+  <p class="lede">You asked for end-to-end MiniMax projects to learn from before you make your own 5-minute video. I searched GitHub, the web and YouTube on 5 Nov 2026. No one has published a 5-minute film made on the open H3 weights with the whole process written up in one place. Between them, though, the pieces below cover every stage from story to final cut, and two of them are long finished films whose tools are public.</p>
+  <div class="verdict">
+    <div class="stat"><div class="n">10 min</div><div class="l">BROOD ZERO: H3 plus LTX 2.3, about two weeks of work, with a coding-agent skill running production</div></div>
+    <div class="stat"><div class="n">177 s</div><div class="l">from one ComfyUI run: 18 parts that flow into each other, about 2 h 07 min on a 16 GB card, no editing afterwards</div></div>
+    <div class="stat accent"><div class="n">≈ 3.6 h</div><div class="l">per full pass of 5 minutes at that pace; 7–11 h with retakes, roughly 12–19 Colab units. Unmeasured on an L4</div></div>
+    <div class="stat amber"><div class="n">ComfyUI</div><div class="l">where nearly every long-form tool here runs. That's s01's route C, not the WanGP route s01 recommends for testing</div></div>
+  </div>
+</header>
+
+<section id="map">
+  <span class="eyebrow">1 · The map</span>
+  <h2>Which stage each one teaches</h2>
+  <p class="sub">A 5-minute film is about thirty 10-second render parts that have to look and sound like one story. Chaining clips past 15 seconds is the thinnest column: three sources teach it as a main topic. The marks come from each video's description and each repo's README; I haven't watched the videos through.</p>
+  <div class="legend">
+    <span><span class="dot full"></span> a main topic</span>
+    <span><span class="dot"></span> shown or touched on</span>
+    <span class="cols">Story: script and planning · Refs: characters, voices and sets kept consistent · Boards: storyboards and shot lists · Shots: prompting and rendering H3 clips · Past 15 s: chaining clips into a longer take · Sound: dialogue, voices and music · Edit: assembly and delivery</span>
+  </div>
+  <div class="tablewrap"><table class="matrix">
+    <thead><tr><th>Resource</th><th>Story</th><th>Refs</th><th>Boards</th><th>Shots</th><th>Past 15 s</th><th>Sound</th><th>Edit</th></tr></thead>
+    <tbody>
+      <tr class="grp"><td colspan="8">Long films · section 2</td></tr>
+      <tr id="m-brood"><td>BROOD ZERO <span class="tag">Tao of AI · film and agent skill</span></td>
+        <td data-label="Story"><span class="dot"></span><span class="sr-only">touched on</span></td><td data-label="Refs"></td>
+        <td data-label="Boards"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Shots"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Past 15 s"></td><td data-label="Sound"></td>
+        <td data-label="Edit"><span class="dot"></span><span class="sr-only">touched on</span></td></tr>
+      <tr id="m-director"><td>3-minute music video <span class="tag">SeeSee-AI · H3 Director</span></td>
+        <td data-label="Story"></td>
+        <td data-label="Refs"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Boards"><span class="dot"></span><span class="sr-only">touched on</span></td>
+        <td data-label="Shots"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Past 15 s"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Sound"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Edit"><span class="dot full"></span><span class="sr-only">main topic</span></td></tr>
+      <tr id="m-static"><td>STATIC <span class="tag">CGlide · film and workflow file</span></td>
+        <td data-label="Story"></td><td data-label="Refs"></td><td data-label="Boards"></td>
+        <td data-label="Shots"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Past 15 s"></td><td data-label="Sound"></td>
+        <td data-label="Edit"><span class="dot"></span><span class="sr-only">touched on</span></td></tr>
+      <tr class="grp"><td colspan="8">The craft · section 3</td></tr>
+      <tr id="m-fain"><td>Film &amp; TV Production Workflow <span class="tag">Fain · video</span></td>
+        <td data-label="Story"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Refs"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Boards"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Shots"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Past 15 s"><span class="dot"></span><span class="sr-only">touched on</span></td>
+        <td data-label="Sound"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Edit"></td></tr>
+      <tr id="m-loop"><td>A short film <span class="tag">Loop Forge · video</span></td>
+        <td data-label="Story"></td>
+        <td data-label="Refs"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Boards"></td>
+        <td data-label="Shots"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Past 15 s"></td>
+        <td data-label="Sound"><span class="dot"></span><span class="sr-only">touched on</span></td>
+        <td data-label="Edit"></td></tr>
+      <tr id="m-smart"><td>2 Characters, 2 Voices <span class="tag">Smart Vision · video</span></td>
+        <td data-label="Story"></td>
+        <td data-label="Refs"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Boards"></td>
+        <td data-label="Shots"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Past 15 s"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Sound"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Edit"><span class="dot"></span><span class="sr-only">touched on</span></td></tr>
+      <tr id="m-brief"><td>Multi-character voices, plus the free pipeline <span class="tag">The AI Brief · video and workflow</span></td>
+        <td data-label="Story"></td>
+        <td data-label="Refs"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Boards"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Shots"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Past 15 s"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Sound"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Edit"><span class="dot full"></span><span class="sr-only">main topic</span></td></tr>
+      <tr id="m-lockup"><td>An entire 3D short film <span class="tag">Ai Lockup · video, hosted</span></td>
+        <td data-label="Story"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Refs"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Boards"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Shots"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Past 15 s"></td>
+        <td data-label="Sound"><span class="dot"></span><span class="sr-only">touched on</span></td>
+        <td data-label="Edit"></td></tr>
+      <tr id="m-virse"><td>Storyboard-to-video guide <span class="tag">Virse · written</span></td>
+        <td data-label="Story"></td>
+        <td data-label="Refs"><span class="dot"></span><span class="sr-only">touched on</span></td>
+        <td data-label="Boards"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Shots"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Past 15 s"><span class="dot"></span><span class="sr-only">touched on</span></td>
+        <td data-label="Sound"></td>
+        <td data-label="Edit"><span class="dot"></span><span class="sr-only">touched on</span></td></tr>
+      <tr class="grp"><td colspan="8">Pipelines on GitHub · section 4</td></tr>
+      <tr id="m-infinite"><td>infinite-creation <span class="tag">SwotAtmk · MIT</span></td>
+        <td data-label="Story"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Refs"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Boards"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Shots"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Past 15 s"></td>
+        <td data-label="Sound"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Edit"><span class="dot full"></span><span class="sr-only">main topic</span></td></tr>
+      <tr id="m-drama"><td>short-drama-production <span class="tag">suihe1 · Apache-2.0</span></td>
+        <td data-label="Story"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Refs"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Boards"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Shots"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Past 15 s"></td>
+        <td data-label="Sound"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Edit"><span class="dot full"></span><span class="sr-only">main topic</span></td></tr>
+      <tr id="m-laoli"><td>forest-laoli-h3 <span class="tag">lixiaoxiao9888-create · MIT</span></td>
+        <td data-label="Story"><span class="dot"></span><span class="sr-only">touched on</span></td>
+        <td data-label="Refs"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Boards"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Shots"><span class="dot full"></span><span class="sr-only">main topic</span></td>
+        <td data-label="Past 15 s"><span class="dot"></span><span class="sr-only">touched on</span></td>
+        <td data-label="Sound"></td><td data-label="Edit"></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="films">
+  <span class="eyebrow">2 · Long films</span>
+  <h2>Three long films whose tools you can see</h2>
+  <p class="sub">Watch these to see what “long” takes on H3: one run by an agent over two weeks, one rendered by a single ComfyUI run, and one made entirely on a home machine.</p>
+  <div class="cards">
+    <div class="card" id="brood">
+      <h3>BROOD ZERO <span class="badge">10 min</span> <span class="badge info">agent-run</span></h3>
+      <dl class="kv">
+        <dt>made by</dt><dd>Tao of AI · uploaded 7 Aug 2026 · 12 min video</dd>
+        <dt>film</dt><dd>a 10-minute sci-fi short made with H3 and LTX 2.3 in about two weeks</dd>
+        <dt>how</dt><dd>after the film, a walkthrough of the coding-agent skill that ran production. It reads one script file holding the storyboard, dialogue, shot descriptions and keyframes, picks the video model per shot (H3 for the harder camera moves) and runs H3 through the API or locally</dd>
+        <dt>tools</dt><dd><a href="https://github.com/ai2764/ai-video-skills">ai2764/ai-video-skills</a> (Claude and Codex formats) and the director skill in <a href="https://github.com/ai2764/Camera-lab">ai2764/Camera-lab</a></dd>
+        <dt>licence</dt><dd><span class="badge warn">none</span> in either repo: learn the method, but don't copy the files into your MIT repo</dd>
+      </dl>
+      <p><b>Learn from it:</b> how you and an agent split a film. In the creator's earlier <a href="https://www.youtube.com/watch?v=ZYe3LH87VCQ">LTX walkthrough</a>, the person writes the story, settings, storyboards and keyframes, and the agent prepares prompts, runs the workflows, reviews the shots and organises the files.</p>
+      <p class="links"><a href="https://www.youtube.com/watch?v=bgvTuzOggyw">Watch BROOD ZERO</a></p>
+    </div>
+    <div class="card" id="director">
+      <h3>A 3-minute music video in one run <span class="badge">177 s</span> <span class="badge ok">16 GB card</span></h3>
+      <dl class="kv">
+        <dt>made by</dt><dd>SeeSee-AI · 11 Oct 2026 · 3 min video</dd>
+        <dt>film</dt><dd>177 s at 768×1152 and 24 fps, from a song and character pictures made beforehand, in H3's reference-to-video-with-audio mode</dd>
+        <dt>how</dt><dd>the Director planned the shots and rendered 18 parts that continue into each other. What you see is straight from the Save Video node: no editing, cutting or stitching afterwards</dd>
+        <dt>render</dt><dd>about 2 h 07 min on an RTX 5060 Ti 16 GB; 8 GB “should work too”, the creator says</dd>
+        <dt>tool</dt><dd><a href="https://github.com/seesee75-commits/ComfyUI-MiniMaxH3-Director">ComfyUI-MiniMaxH3-Director</a> · GPL-3.0 · 338 stars · v1.0.1 released 3 Nov. Needs ComfyUI 0.37 or later and about 60 GB of disk; tested at 1280×704 with Turbo on 16 GB</dd>
+        <dt>caveat</dt><dd>made with an early v1 build that over-sharpens towards the end; the creator says that has been worked on since</dd>
+      </dl>
+      <p><b>Learn from it:</b> how a long piece holds together. Characters, voices and songs go on cards and shots go on a timeline; the Director renders about 10 s at a time and carries picture and sound across every join. It's GPL, so run it as a tool and keep its code out of your repo.</p>
+      <p class="links"><a href="https://www.youtube.com/watch?v=H0nnmKTGhMs">Watch the 3-minute video</a> · <a href="https://youtu.be/ARaXmSfd9UQ">a 1-minute first/last-frame example</a></p>
+    </div>
+    <div class="card" id="static">
+      <h3>STATIC <span class="badge">3 min</span> <span class="badge ok">workflow public</span></h3>
+      <dl class="kv">
+        <dt>made by</dt><dd>CGlide · 2 Oct 2026 · 3 min video</dd>
+        <dt>film</dt><dd>a sci-fi short made entirely on the creator's own machine, with ComfyUI and Singularity, a community fine-tune of H3</dd>
+        <dt>tools</dt><dd>the workflow file <code>Minimax_h3_Studio_Lat_Uscl_CK_8.json</code> in <a href="https://github.com/CGlide/ComfyUI-CGlide">CGlide/ComfyUI-CGlide</a> (GPL-3.0, 167 stars), a latent upscaler, lightx2v's H3 Turbo LoRAs and a small preview decoder</dd>
+      </dl>
+      <p><b>Learn from it:</b> the quality bar for a short made at home, with the exact graph that made it. The description lists the models but doesn't walk through the process.</p>
+      <p class="links"><a href="https://www.youtube.com/watch?v=2EyKciQXbJI">Watch STATIC</a></p>
+    </div>
+  </div>
+</section>
+
+<section id="craft">
+  <span class="eyebrow">3 · The craft</span>
+  <h2>Six to watch or read, in this order</h2>
+  <p class="sub">All six are about H3. The first three teach the core: planning, references and chaining. The rest add a free pipeline, the hosted route and a written checklist.</p>
+  <div class="steps">
+    <div class="step" id="c-fain"><b><a href="https://www.youtube.com/watch?v=IxD0p4Gd9FM">Fain: MiniMax H3 AI — Film &amp; TV Production Workflow</a> <span class="badge rec">start here</span></b>
+      <p>Story planning, character references, storyboards, prompts, generation and audio. It compares three approaches (shot by shot, one longer scene in one go, and visual storyboards as references) and says what didn't work. The prompts are in a public doc linked from the description.</p>
+      <span class="tag">26 Aug 2026 · 17 min · ComfyUI</span></div>
+    <div class="step" id="c-loop"><b><a href="https://www.youtube.com/watch?v=fQ8HZC_dTXs">Loop Forge: MiniMax H3 reference to video, a short film</a></b>
+      <p>A 1-minute film with two characters who stay the same people, in the same restaurant, with the same voices, made with ComfyUI's stock reference-to-video template. The trick: a turnaround sheet, a 3D layout of the room and a voice sample go into the same generation, and the prompt says which subject is in which picture.</p>
+      <span class="tag">29 Aug 2026 · 12 min · RTX 3060 12 GB</span></div>
+    <div class="step" id="c-smart"><b><a href="https://www.youtube.com/watch?v=Z8giDB2wzFc">Smart Vision: 2 Characters, 2 Voices, 1 Complete AI Film</a></b>
+      <p>A 38 s film from two character images and two voice references. The dialogue is one 23 s clip built from four generation windows with Motion Context. The close-up reveal and the ending are separate short clips, so either can be redone without rebuilding the scene.</p>
+      <span class="tag">13 Sep 2026 · 16 min · runs on 8 GB at lower resolution</span></div>
+    <div class="step" id="c-brief"><b><a href="https://www.youtube.com/watch?v=pj6UU2LiUfc">The AI Brief: can H3 keep multiple characters and their voices consistent?</a></b>
+      <p>Several characters and their voices kept consistent across scenes, with a latent upscale at the end. Their free <a href="https://shahzaib632.gumroad.com/l/short-film-director-krea-h3">Short Film Director Pipeline</a> goes from Krea stills of the character to a labelled storyboard board, then H3 scene by scene, then plan, review and assemble. No licence is stated, and the weights aren't included.</p>
+      <span class="tag">1 Sep 2026 · 10 min · free ComfyUI workflow on Gumroad</span></div>
+    <div class="step" id="c-lockup"><b><a href="https://www.youtube.com/watch?v=ZklZSrJnXqA">Ai Lockup: I made an entire 3D short film with AI</a></b>
+      <p>The hosted route, with no GPU of your own: a screenplay written with ChatGPT, storyboards from GPT Image 2, then H3 on hailuoai.video with consistent characters and voices and lip-sync. The description carries affiliate links.</p>
+      <span class="tag">14 Aug 2026 · 16 min · hosted</span></div>
+    <div class="step" id="c-virse"><b><a href="https://www.virse.ai/blog/minimax-h3-storyboard-to-video">Virse: MiniMax H3 storyboard-to-video</a></b>
+      <p>A vendor blog, but a sound order of work: build the storyboard, audit it, give each reference one job, group shots by continuity, test at low resolution (“solve direction before fidelity”), then regenerate only the groups that failed. Its memory figures are the author's own tests.</p>
+      <span class="tag">31 Aug 2026 · written · vendor blog</span></div>
+  </div>
+</section>
+
+<section id="pipelines">
+  <span class="eyebrow">4 · Pipelines</span>
+  <h2>GitHub projects that go from script to film</h2>
+  <p class="sub">None of these drops into your harness as it is, but each has solved part of the problem. Stars and dates as of 5 Nov 2026.</p>
+  <div class="tablewrap"><table class="pipes stackable">
+    <thead><tr><th>Repo</th><th>What goes in and comes out</th><th>Runs on</th><th>Use it for</th></tr></thead>
+    <tbody>
+      <tr id="p-infinite">
+        <td data-label="Repo"><a href="https://github.com/SwotAtmk/infinite-creation">SwotAtmk/infinite-creation</a><span class="tag">MIT · 238 stars · pushed 4 Nov · docs in Chinese</span></td>
+        <td data-label="In → out">Novel or script → character bible and style guide → character, scene, prop and voice assets → storyboard → H3 shot by shot → music and subtitles → ffmpeg. Dialogue comes from H3's own voice reference, with no separate text-to-speech. <b>Outputs:</b> the repo page plays four finished videos. <code>docs/run_demo.md</code> pairs three of them with the shot table that went in, planned at 30, 30 and 35 s, so all are short.</td>
+        <td data-label="Runs on">A Node app (Node 22+, pnpm, Bun, ffmpeg) driving your ComfyUI, local or on RunningHub. The one-click installer is Windows-only.</td>
+        <td data-label="Use it for">The closest public match to a whole film pipeline on H3: read its stage order and asset layout.</td></tr>
+      <tr id="p-drama">
+        <td data-label="Repo"><a href="https://github.com/suihe1/short-drama-production">suihe1/short-drama-production</a><span class="tag">Apache-2.0 · 191 stars · pushed 16 Sep · in Chinese</span></td>
+        <td data-label="In → out">A Codex skill that runs production as a chain with approval gates: outline, characters, art, script, director's and technical storyboards, H3 jobs, sound assets, rough cut, quality check. The README shows no finished output.</td>
+        <td data-label="Runs on">The hosted H3 API, MiniMax's or CompShare's. ComfyUI is an extension point, not built in.</td>
+        <td data-label="Use it for">Keeping 30 shots under control through rewrites: state, approvals and checks.</td></tr>
+      <tr id="p-laoli">
+        <td data-label="Repo"><a href="https://github.com/lixiaoxiao9888-create/forest-laoli-h3">lixiaoxiao9888-create/forest-laoli-h3</a><span class="tag">MIT · 43 stars · created 1 Nov · English README</span></td>
+        <td data-label="In → out">Script → reference assets → H3 storyboard → prompt drafts → 36 automated checks → a delivery package of prompts, not video.</td>
+        <td data-label="Runs on">Any agent and any renderer: it hands over plain-text prompts.</td>
+        <td data-label="Use it for">Read it before writing <code>prompts/h3.py</code>: together, the checks list the ways H3 prompts fail.</td></tr>
+      <tr id="p-cases">
+        <td data-label="Repo"><a href="https://github.com/SkyNotSilent/awesome-MiniMax-H3-cases">SkyNotSilent/awesome-MiniMax-H3-cases</a><span class="tag">MIT · 218 stars · pushed 4 Nov</span></td>
+        <td data-label="In → out">A library of 3,091 playable H3 videos and 771 complete prompts, plus 26 guides, each with its original source.</td>
+        <td data-label="Runs on">A website; nothing to install.</td>
+        <td data-label="Use it for">Its long-video filter (over 15 s) shows what long H3 work looks like and the prompts behind it.</td></tr>
+    </tbody>
+  </table></div>
+  <div class="callout" id="in-s00">
+    <p><b>Already in s00</b> (“Start from these instead of a blank file”): ViMax, comfyui-AICG3D and Qingshan. ViMax still can't render with H3: H3 is a planned item on its roadmap, and its MiniMax configs use MiniMax-M3 only for the writing, while the video still goes to Veo.</p>
+  </div>
+</section>
+
+<section id="yours">
+  <span class="eyebrow">5 · Your 5 minutes</span>
+  <h2>What this means for your film</h2>
+  <div class="cards">
+    <div class="card" id="y-time">
+      <h3>Time: two data points</h3>
+      <p>BROOD ZERO's 10 minutes took one creator about two weeks. At the Shanghai International Film Festival in June, MiniMax gave four selected creator teams a month each to make an end-to-end AI film on MiniMax Hub, its hosted studio, which has since been renamed MiniMax Design. The lengths of those films aren't stated, and that's the hosted route, not the open weights you're testing.</p>
+    </div>
+    <div class="card" id="y-render">
+      <h3>Render cost: an extrapolation</h3>
+      <p class="calc">300 s × 127 min ÷ 177 s<br>≈ 3.6 h per pass<br>× 2–3 tries ≈ 7–11 h<br>× 1.71 units an hour<br>≈ 12–19 units<br>≈ $1.20–1.90</p>
+      <p>That's SeeSee's pace on a 16 GB card at 768×1152. Nobody has measured an L4; runs R1–R4 in s01 will. Paid Colab sessions end after at most 12 hours and take the disk with them, so keep the parts on Drive and plan on more than one session.</p>
+    </div>
+    <div class="card" id="y-route">
+      <h3>Software: ComfyUI <span class="badge warn">changes s01</span></h3>
+      <p>Nearly every long-form tool here is a ComfyUI node or drives ComfyUI: the Director, CGlide's workflow, The AI Brief's pipeline and infinite-creation. WanGP is still fine for s01's tests, but the 5-minute build points to s01's route C, ComfyUI on Colab. Weigh that in s01's decision D1.</p>
+    </div>
+    <div class="card" id="y-rights">
+      <h3>Rights</h3>
+      <p>Use your own characters (AGENTS.md rule 6), and music you made or licensed. The H3 Community Licence has regional limits, which BROOD ZERO's description also warns about, so s00's Q1 still needs an answer.</p>
+    </div>
+  </div>
+</section>
+
+<section id="left-out">
+  <span class="eyebrow">6 · Left out</span>
+  <h2>Read and left out, and why</h2>
+  <div class="tablewrap"><table class="stackable">
+    <thead><tr><th>What</th><th>Why it's out</th></tr></thead>
+    <tbody>
+      <tr id="x-swap"><td data-label="What">Character-swap tools: <a href="https://github.com/D3voz/openjutsu">openjutsu</a> and <a href="https://github.com/karuvanan/MiniMax-H3-Director-Cut-Studio">MiniMax H3 Director Cut Studio</a></td><td data-label="Why">Their headline feature replaces a person in existing footage, and rule 6 rules out a real person's likeness without consent.</td></tr>
+      <tr id="x-clone"><td data-label="What">fal's <a href="https://www.youtube.com/watch?v=PtZdBMUVI04">MiniMax H3 Actor Cloning Guide</a></td><td data-label="Why">It clones an actor's performance and voice, so it's only usable with your own.</td></tr>
+      <tr id="x-patreon"><td data-label="What">SECourses' <a href="https://www.youtube.com/watch?v=1580ZDX-60Q">Infinite Video</a> and AI Forge Lab's <a href="https://www.youtube.com/watch?v=6R6-dCWc0ZQ">Singularity workflow</a></td><td data-label="Why">The presets and workflows are behind a Patreon paywall.</td></tr>
+      <tr id="x-courses"><td data-label="What">General AI-film courses built on Higgsfield, OpenArt or Pollo, such as <a href="https://www.youtube.com/watch?v=tW40b122Rbs">Higgsfield's own</a></td><td data-label="Why">Good on story and editing, but they don't use MiniMax, and most are affiliate pitches.</td></tr>
+      <tr id="x-studio"><td data-label="What"><a href="https://github.com/rookiestar28/MiniMaxH3-Studio">MiniMaxH3-Studio</a></td><td data-label="Why">It plans videos of up to 60 s, and its editor and final assembly run only on Windows for now, so not on Colab.</td></tr>
+      <tr id="x-imagination"><td data-label="What"><a href="https://github.com/drowzeys/Imagination-Studio-by-keys-Wasserman">Imagination Studio</a></td><td data-label="Why">It runs H3 on Apple-silicon Macs, but needs 96 GB of memory for video; your Mac has 32 GB.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="next">
+  <span class="eyebrow">7 · Next</span>
+  <h2>If you want me to act on any of this</h2>
+  <p class="sub">Optional. Tick what you want, queue it, then press Send to Agent, or use the copy button if you opened this file directly.</p>
+  <div class="qgrid">
+    <div class="card">
+      <form class="q-form" data-lavish-question="after-s02" onsubmit="event.preventDefault(); const f=event.currentTarget; const acts=[...f.querySelectorAll('input[name=act]:checked')].map((i)=>i.value); const n=(new FormData(f).get('act_note')||'').trim(); if(!acts.length &amp;&amp; !n) return; const what=acts.length ? acts.length+' action(s)' : 'a note'; window.lavish &amp;&amp; window.lavish.queuePrompt('After reading s02: '+(acts.length ? acts.join('; ') : 'no action ticked')+(n ? ' — note: '+n : '')+'.',{tag:'choice',text:'s02 next: '+what,element:f,data:{question:'after-s02',answer:acts,note:n}}); f.querySelector('.queued').textContent='queued: '+what;">
+        <h3>What should I do with this?</h3>
+        <label><input type="checkbox" name="act" value="Add a 5-minute milestone to s01: the shot list, the chaining tool, the render budget and the review steps"> Add a 5-minute milestone to s01: shot list, chaining tool, render budget, review</label>
+        <label><input type="checkbox" name="act" value="Re-weigh s01's D1 with the 5-minute build in mind, with ComfyUI on Colab (route C) as a candidate recommendation"> Re-weigh s01's D1 with the 5-minute build in mind</label>
+        <label><input type="checkbox" name="act" value="Add the new finds to s00's table 'Start from these instead of a blank file'"> Add the new finds to s00's “Start from these” table</label>
+        <input type="text" name="act_note" placeholder="note (optional)">
+        <div class="row"><button class="btn btn-sm" type="submit">Queue answer</button><span class="queued"></span></div>
+      </form>
+    </div>
+  </div>
+  <div class="copyrow">
+    <button type="button" class="btn btn-sm" onclick="(async (btn) => {
+      const copyRun = btn._lavishCopyRun = (btn._lavishCopyRun || 0) + 1;
+      const qs = [...document.querySelectorAll('[data-lavish-question]')];
+      const status = btn.parentElement.querySelector('[data-lavish-copy-all-status]');
+      btn.parentElement.querySelector('[data-lavish-copy-all-manual]')?.remove();
+      const out = [];
+      for (const q of qs) {
+        const key = q.getAttribute('data-lavish-question')?.trim() || 'Question';
+        const lines = [];
+        for (const el of q.querySelectorAll('input, select, textarea')) {
+          if (el.matches(':disabled')) continue;
+          if (el.closest('[data-lavish-question]') !== q) continue;
+          const isChoice = el.matches('input[type=checkbox], input[type=radio]');
+          if (isChoice &amp;&amp; !el.checked) continue;
+          if (el.matches('input[type=button], input[type=submit], input[type=reset], input[type=image], input[type=hidden], input[type=file], input[type=range], input[type=color]')) continue;
+          let vals;
+          if (el instanceof HTMLSelectElement) {
+            vals = [...el.selectedOptions].filter((o) => !o.disabled &amp;&amp; !o.closest('optgroup[disabled]')).map((o) => o.value.trim()).filter(Boolean);
+          } else {
+            const v = isChoice &amp;&amp; (!el.hasAttribute('value') || !el.value.trim())
+              ? el.labels?.[0]?.textContent?.trim() || el.getAttribute('aria-label')?.trim() || el.name || ''
+              : el.value.trim();
+            vals = v ? [v] : [];
+          }
+          const label = el.name || el.labels?.[0]?.textContent?.trim() || el.getAttribute('aria-label')?.trim() || el.getAttribute('placeholder')?.trim() || el.tagName.toLowerCase();
+          for (const v of vals) lines.push('  ' + label + ': ' + v.split('\n').join('\n    '));
+        }
+        if (lines.length) out.push(key + ':\n' + lines.join('\n'));
+      }
+      const text = out.join('\n\n');
+      if (!text) {
+        status.textContent = qs.length ? 'No answers to copy yet.' : 'No questions or answers to copy.';
+        return;
+      }
+      status.textContent = '';
+      try {
+        if (typeof navigator.clipboard?.writeText !== 'function') throw new Error('Clipboard API unavailable');
+        await navigator.clipboard.writeText(text);
+        if (copyRun !== btn._lavishCopyRun) return;
+        status.textContent = 'Answers copied.';
+        return;
+      } catch {}
+      if (copyRun !== btn._lavishCopyRun) return;
+      const tmp = document.createElement('textarea');
+      tmp.value = text;
+      tmp.readOnly = true;
+      tmp.setAttribute('aria-hidden', 'true');
+      tmp.style.position = 'fixed';
+      tmp.style.left = '-10000px';
+      document.body.append(tmp);
+      tmp.focus();
+      tmp.select();
+      let ok = false;
+      try {
+        ok = document.execCommand('copy');
+      } catch {}
+      tmp.remove();
+      if (ok) {
+        status.textContent = 'Answers copied.';
+        return;
+      }
+      btn.parentElement.querySelector('[data-lavish-copy-all-manual]')?.remove();
+      const man = document.createElement('textarea');
+      man.value = text;
+      man.readOnly = true;
+      man.rows = Math.min(12, Math.max(3, text.split('\n').length));
+      man.setAttribute('aria-label', 'Answers to copy manually');
+      man.dataset.lavishCopyAllManual = '';
+      btn.insertAdjacentElement('afterend', man);
+      man.focus();
+      man.select();
+      status.textContent = 'Clipboard unavailable. Copy the answers below manually.';
+    })(this)">Copy all answers</button>
+    <span data-lavish-copy-all-status role="status" aria-live="polite"></span>
+  </div>
+</section>
+
+<section id="sources">
+  <span class="eyebrow">Sources</span>
+  <h2>Where each claim comes from (read 5 Nov 2026)</h2>
+  <p class="sub">Video facts come from each video's page: title, channel, upload date, length and description. I haven't watched the videos through. Repo facts come from the GitHub API and each README.</p>
+  <div class="src">
+    <h3>YouTube</h3>
+    <ul>
+      <li><a href="https://www.youtube.com/watch?v=bgvTuzOggyw">H3 + LTX 2.3 Made This 10-Minute AI Film | BROOD ZERO</a> · Tao of AI, 7 Aug 2026, 12 min</li>
+      <li><a href="https://www.youtube.com/watch?v=ZYe3LH87VCQ">How I Make Long Local LTX Videos Without Manually Running ComfyUI</a> · Tao of AI, 21 Jul 2026, 8 min</li>
+      <li><a href="https://www.youtube.com/watch?v=H0nnmKTGhMs">A 3-minute AI music video from ONE click — MiniMax H3 Director v1 preview</a> · SeeSee-AI, 11 Oct 2026, 3 min</li>
+      <li><a href="https://www.youtube.com/watch?v=2EyKciQXbJI">STATIC | Sci-Fi Short Film Made 100% Locally (ComfyUI + MiniMax H3)</a> · CGlide, 2 Oct 2026, 3 min</li>
+      <li><a href="https://www.youtube.com/watch?v=IxD0p4Gd9FM">MiniMax H3 AI — Film &amp; TV Production Workflow</a> · Fain, 26 Aug 2026, 17 min</li>
+      <li><a href="https://www.youtube.com/watch?v=fQ8HZC_dTXs">MiniMax H3 reference to video: a short film</a> · Loop Forge, 29 Aug 2026, 12 min</li>
+      <li><a href="https://www.youtube.com/watch?v=Z8giDB2wzFc">MiniMax H3: 2 Characters, 2 Voices, 1 Complete AI Film</a> · Smart Vision, 13 Sep 2026, 16 min</li>
+      <li><a href="https://www.youtube.com/watch?v=pj6UU2LiUfc">Can MiniMax H3 Keep Multiple Characters and Their Voices Consistent?</a> · The AI Brief, 1 Sep 2026, 10 min</li>
+      <li><a href="https://www.youtube.com/watch?v=ZklZSrJnXqA">I Made an Entire 3D Short Film with AI</a> · Ai Lockup, 14 Aug 2026, 16 min</li>
+      <li>Read and left out: SECourses (10 Aug), AI Forge Lab (11 Oct), fal (17 Aug) and Higgsfield AI (13 Mar), linked in section 6</li>
+    </ul>
+    <h3>GitHub (API and READMEs)</h3>
+    <ul>
+      <li>seesee75-commits/ComfyUI-MiniMaxH3-Director (requirements, linked examples, release v1.0.1 of 3 Nov) · CGlide/ComfyUI-CGlide · ai2764/ai-video-skills and ai2764/Camera-lab (no licence file in either)</li>
+      <li>SwotAtmk/infinite-creation · suihe1/short-drama-production · lixiaoxiao9888-create/forest-laoli-h3 (README and README.en) · SkyNotSilent/awesome-MiniMax-H3-cases</li>
+      <li>HKUDS/ViMax: README roadmap and <code>configs/script2video_minimax.yaml</code></li>
+      <li>Read and left out: D3voz/openjutsu · karuvanan/MiniMax-H3-Director-Cut-Studio · rookiestar28/MiniMaxH3-Studio (project length 4–60 s, editor needs Windows x64) · drowzeys/Imagination-Studio-by-keys-Wasserman (96 GB Mac minimum for video)</li>
+    </ul>
+    <h3>Web</h3>
+    <ul>
+      <li><a href="https://www.virse.ai/blog/minimax-h3-storyboard-to-video">Virse: MiniMax H3 Storyboard-to-Video</a> · 31 Aug 2026, vendor blog</li>
+      <li><a href="https://shahzaib632.gumroad.com/l/short-film-director-krea-h3">The AI Brief: Short Film Director Pipeline (Krea + MiniMax H3)</a> · Gumroad product page</li>
+      <li><a href="https://www.minimax.io/news/minimax-shanghai-international-film-festival">MiniMax × Shanghai International Film Festival</a> · 29 Jun 2026: Hub's launch, the four AI Backlot teams and their one-month production cycle</li>
+      <li><a href="https://kompozy.io/reviews/minimax-hub">Kompozy: MiniMax Hub review</a> · last verified 25 Sep 2026: the rename to MiniMax Design</li>
+    </ul>
+  </div>
+</section>
+</main>
+</body>
+</html>
