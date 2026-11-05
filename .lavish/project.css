@@ -1,0 +1,7 @@
+/* video-gen — house UI v1.
+   PROVISIONAL, written by hand, following the P11 rotation-tracker precedent: video-gen is not yet
+   in nmp-central-ai/registry/projects.yaml, and no hue is left a full 30° from the ten in use.
+   228 sits 28° from P? (200) and 27° from P? (255): the widest gap available. Confirm or change it in
+   the s00 plan's decision form; once the registry carries a hue, `make install-house-ui` replaces
+   this file. Load after house.css. The hue is the only thing this project owns. */
+:root{ --hue:228; }

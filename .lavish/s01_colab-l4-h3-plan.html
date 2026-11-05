@@ -1,0 +1,356 @@
+<!doctype html>
+<html lang="en" data-lavish-annotate="on">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>video-gen · s01 · H3 on a Colab L4</title>
+<link rel="stylesheet" href="house.css">
+<link rel="stylesheet" href="project.css">
+<style>
+  /* layout helpers only: every colour is a house token */
+  th{ white-space:nowrap; }
+  td code, li code, p code, dd code{ overflow-wrap:anywhere; }
+  td, th{ vertical-align:top; }
+  .kv dd code{ white-space:normal; }
+  .cite{ font-family:var(--mono); font-size:var(--t-2); color:var(--muted); }
+  .cards .card{ min-width:0; }
+  .card .cost{ display:block; }
+  pre{ overflow-x:auto; white-space:pre-wrap; overflow-wrap:anywhere; margin:var(--s2) 0 0; }
+  .step pre{ font-size:var(--t-2); }
+  svg text{ font-family:var(--sans); font-size:12px; fill:currentColor; }
+  svg .mono{ font-family:var(--mono); font-size:11px; }
+  svg .box{ fill:var(--panel); stroke:var(--line-2); }
+  svg .core{ fill:var(--accent-soft); stroke:var(--accent); stroke-width:1.5; }
+  svg .wash{ fill:var(--accent-wash); stroke:var(--line-2); }
+  svg .edge{ stroke:var(--muted); fill:none; stroke-width:1.2; marker-end:url(#s01arr); }
+  svg .rule{ stroke:var(--line-2); }
+  svg .muted{ fill:var(--muted); }
+  svg .stop{ fill:var(--red); }
+  #steps > h3{ margin-top:var(--s6); }
+  .runs td:first-child{ white-space:nowrap; font-weight:600; }
+  .delta td:first-child{ font-weight:600; min-width:12ch; }
+  .src li{ margin-bottom:var(--s1); overflow-wrap:anywhere; }
+  form.q-form{ margin:0; }
+  form.q-form label{ display:block; padding:var(--s1) 0; }
+  form.q-form input[type=text]{ width:100%; box-sizing:border-box; font:inherit; font-size:var(--t-1); padding:var(--s1) var(--s2); border:1px solid var(--line-2); border-radius:4px; background:var(--bg); color:var(--ink); }
+  form.q-form .row{ display:flex; gap:var(--s3); align-items:center; flex-wrap:wrap; margin-top:var(--s2); }
+  .copyrow{ margin-top:var(--s4); display:flex; gap:var(--s3); align-items:center; flex-wrap:wrap; }
+  .copyrow textarea{ flex-basis:100%; }
+  @media (max-width:560px){
+    .runs td:first-child{ white-space:normal; }
+    /* narrow screens: each row becomes a block, each cell labelled by its data-label */
+    table.stackable, table.stackable tbody, table.stackable tr, table.stackable td{ display:block; }
+    table.stackable thead{ display:none; }
+    table.stackable tr{ padding:var(--s2) 0; border-bottom:1px solid var(--line); }
+    table.stackable tr:last-child{ border-bottom:0; }
+    table.stackable td{ border-bottom:0; padding:var(--s1) var(--s3); }
+    table.stackable td[data-label]::before{ content:attr(data-label); display:block; font-size:var(--t-2); font-weight:600; text-transform:uppercase; letter-spacing:var(--track-label); color:var(--muted); }
+  }
+</style>
+</head>
+<body>
+<main>
+<header>
+  <span class="eyebrow">video-gen · plan s01 · 4 Nov 2026 · branch <code>video-gen-spike</code> · replaces the Kaggle route in s00 section 7</span>
+  <h1>Run the H3 test on a Colab L4: <em>same model, same 2K pass, no Kaggle queue</em></h1>
+  <p class="lede">You're testing MiniMax H3 video and audio with AIQuest's “MiniMax H3 + Open-H3 Regenerate 2K” notebook, and the blocker is Kaggle's queue for two T4s, not speed. This plan moves the test to Google Colab, paid by compute units, on an L4. One finding shapes it: the notebook's engine is written for exactly two GPUs, and Colab gives you one. So on the L4 we run <b>WanGP</b>, the open-source app the notebook is built on. WanGP runs H3 on a single card, and since 29 Oct it has had its own 2K regenerate preset.</p>
+  <div class="verdict">
+    <div class="stat"><div class="n">2 → 1</div><div class="l">GPUs. The notebook splits every transformer block across two T4s and stops at startup if it finds fewer than two. A Colab session has one GPU</div></div>
+    <div class="stat accent"><div class="n">WanGP</div><div class="l">the same H3 code the notebook drives, with its own memory manager for one card and an “H3 Regenerate 2K 2 Phases” preset (fixed 29–30 Oct)</div></div>
+    <div class="stat"><div class="n">≈ $0.17/h</div><div class="l">an L4 uses about 1.71 compute units an hour, and $9.99 buys 100 units: about 58 hours (community measurement, March 2026)</div></div>
+    <div class="stat amber"><div class="n">Licence</div><div class="l">s00's Q1 still applies to the H3 weights, and Colab doesn't let you choose where the VM runs. Settle it before session 1</div></div>
+  </div>
+</header>
+
+<section id="today">
+  <span class="eyebrow">1 · The notebook today</span>
+  <h2>What AIQuest's notebook does, and why it can't move as it is</h2>
+  <p class="sub">Read from the public copy: <code>TeamAIQ/Colab-notebooks</code> → <code>kaggle_notebooks/minimax-h3-open-h3-regenerate-2k.ipynb</code>, added 29 Oct 2026. Your Kaggle copy has the same name. I couldn't read your copy directly: Kaggle only shows the cells once the session has a GPU.</p>
+  <figure class="fig">
+    <svg viewBox="0 0 780 232" width="100%" role="img" aria-labelledby="s01f1t">
+      <title id="s01f1t">Where the weights live: two T4s on Kaggle today, one L4 with WanGP on Colab</title>
+      <defs><marker id="s01arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" fill="var(--muted)"/></marker></defs>
+      <g id="s01f1-kaggle">
+        <title>Today: AIQuest's engine on Kaggle's two T4s</title>
+        <text x="10" y="18" class="mono muted">TODAY · KAGGLE, 2 × T4</text>
+        <rect class="box" x="10" y="30" width="175" height="62" rx="6"/>
+        <text x="22" y="54">T4 · GPU 0 · 15 GB</text>
+        <text x="22" y="76" class="mono muted">half of each block</text>
+        <rect class="box" x="195" y="30" width="175" height="62" rx="6"/>
+        <text x="207" y="54">T4 · GPU 1 · 15 GB</text>
+        <text x="207" y="76" class="mono muted">other half + encoders</text>
+        <text x="10" y="116" class="muted">blocks split in two, partial sums swapped every block</text>
+        <rect class="wash" x="10" y="130" width="360" height="56" rx="6"/>
+        <text x="22" y="153">System RAM · about 24 GB used</text>
+        <text x="22" y="174" class="mono muted">text encoder and VAEs, run on GPU 1</text>
+        <text x="10" y="214" class="stop">stops at startup if it finds one GPU</text>
+      </g>
+      <line class="rule" x1="390" y1="8" x2="390" y2="224"/>
+      <g id="s01f1-colab">
+        <title>Plan: WanGP on one Colab L4, weights streamed from system RAM</title>
+        <text x="410" y="18" class="mono muted">PLAN · COLAB, 1 × L4, WANGP</text>
+        <rect class="wash" x="410" y="30" width="360" height="62" rx="6"/>
+        <text x="422" y="54">System RAM · about 53 GB</text>
+        <text x="422" y="76" class="mono muted">DiT 21 GB pinned · encoders on demand</text>
+        <line class="edge" x1="740" y1="94" x2="740" y2="128"/>
+        <text x="422" y="116" class="muted">blocks stream to the GPU at every step</text>
+        <rect class="core" x="410" y="130" width="360" height="56" rx="6"/>
+        <text x="422" y="153">L4 · 22.5 GB usable</text>
+        <text x="422" y="174" class="mono muted">current blocks + activations + VAE</text>
+        <text x="410" y="214" class="muted">Profile 4: runs models bigger than the card</text>
+      </g>
+    </svg>
+    <figcaption>Figure 1. Today the engine needs both T4s at once. On the L4, WanGP keeps the transformer in system RAM and streams it to the GPU block by block at every step. That costs some speed against a card that holds everything, but it runs on one GPU. The 53 GB of RAM is a 2024 figure for Colab's L4 runtime; step 2 checks it.</figcaption>
+  </figure>
+  <dl class="kv">
+    <dt>pipeline</dt><dd><b>Preview:</b> H3 with the PDMD 4-step speed LoRA makes a 672×384 clip (16:9) with 32 kHz stereo audio. <b>Upscale:</b> Open-H3-Regenerate-2K (NVIDIA's open replacement for MiniMax's hosted 2K stage) runs its latent upscaler, then 2–3 steps with its refiner LoRA, to 720p, 1080p or 2K. The preview's soundtrack is kept.</dd>
+    <dt>engine</dt><dd>Cell 2 writes <code>run_h3_2k.py</code> (3,352 lines) on top of WanGP pinned to <code>b8b18f81</code> (1 Oct). Every transformer block is split across the two T4s, the text encoder and VAEs run on GPU 1, and VAE decoding is shared between both. It exits if <code>torch.cuda.device_count() &lt; 2</code>.</dd>
+    <dt>weights</dt><dd>About 55 GB downloaded, 44 GB on disk: H3 FL2VA pruned 20B INT8 (21.06 GB), Qwen3-VL-32B text encoder GGUF Q4_K_M (14.58 GB), video and audio VAEs (3.4 GB), PDMD LoRA (1.38 GB), latent upscaler (0.69 GB), and the refiner LoRA (12.45 GB FP32, converted to 3.1 GB INT8 while it downloads).</dd>
+    <dt>Kaggle-only</dt><dd><code>/kaggle/tmp</code> for weights, <code>/kaggle/input</code> to reuse an attached dataset, outputs in <code>/kaggle/working/outputs</code>, and a Cloudflare or Gradio link for the UI.</dd>
+    <dt>times, 2 × T4</dt><dd>5 s at 16:9, Fast setting: 384p preview ≈ 2 min · 720p ≈ 5 min · 1080p ≈ 13 min · 2K ≈ 23 min (AIQuest's table in the notebook).</dd>
+  </dl>
+</section>
+
+<section id="routes">
+  <span class="eyebrow">2 · The decision</span>
+  <h2>Three ways onto one L4</h2>
+  <p class="sub">All three aim at the same thing: H3 video with audio, plus the 2K pass, on one 22.5 GB GPU.</p>
+  <div class="cards">
+    <div class="card" id="route-port">
+      <h3>A · Port AIQuest's engine <span class="badge warn">not recommended</span></h3>
+      <p>Keeps his UI and his tuned tiling. But the two-GPU split and the shared decode would have to be rewritten, and the engine never streams weights: the 21 GB transformer plus the 3.1 GB refiner LoRA don't fit in 22.5 GB at once.</p>
+      <p class="cost"><b>Cost:</b> days of work on someone else's 3,352 lines, redone whenever he updates them.</p>
+    </div>
+    <div class="card rec" id="route-wangp">
+      <h3>B · Run WanGP itself <span class="badge rec">recommended</span></h3>
+      <p>The same H3 code the notebook drives. Its default memory profile (Profile 4) keeps the main models in system RAM and sends them to the GPU part by part, which is how it runs models bigger than the card. It has the 2K regenerate built in, H3's speed profiles, Ref2VA with voice references, and a headless mode (<code>--process settings.json</code>) for repeatable runs.</p>
+      <p class="cost"><b>Cost:</b> one install cell and one launch cell. The risk is the install on Colab (step 3).</p>
+    </div>
+    <div class="card" id="route-comfy">
+      <h3>C · ComfyUI on Colab <span class="badge info">later, for M2</span></h3>
+      <p>Where s00's harness ends up: workflow JSON submitted from code, later on Modal. The H3 templates are built in, but the 2K pass needs a community conversion of the refiner LoRA and, in an RTX 5090 test, about 32 GB of VRAM. On 22.5 GB it would lean on ComfyUI's offloading.</p>
+      <p class="cost"><b>Cost:</b> more wiring now. Worth it once the harness exists.</p>
+    </div>
+  </div>
+  <div class="callout">
+    <p><b>Recommendation: B.</b> It's the shortest path to the same outputs on one GPU, and it keeps the test about H3 rather than about porting code. C becomes the right move when M2 needs workflows the harness can submit.</p>
+  </div>
+</section>
+
+<section id="steps">
+  <span class="eyebrow">3 · The plan</span>
+  <h2>First session: about two hours and 4 units</h2>
+  <p class="sub">Each step shows its time and rough cost at 1.71 units an hour. The code is a first draft; step 3 is where Colab is most likely to push back.</p>
+  <div class="callout warn">
+    <p><b>Before session 1: s00's Q1.</b> The H3 licence excludes the US, EU, UK and South Korea, and Colab doesn't let you choose the VM's location. If Q1 is still open, settle it first. Separately, Colab bans deepfakes on every runtime, which AGENTS.md rule 6 already rules out.</p>
+  </div>
+  <div class="steps">
+    <div class="step" id="step-units"><b>Buy units and pick the L4.</b> Colab → Pay As You Go: 100 units for $9.99, which expire after 90 days (or Colab Pro). Then Runtime → Change runtime type → L4 GPU. A positive unit balance also lifts the free tier's ban on working mainly through a web UI.<span class="tag">5 min · $9.99 once</span></div>
+    <div class="step" id="step-probe"><b>Probe the runtime.</b> Read the driver, RAM, disk and Python version before installing anything:
+<pre><code>!nvidia-smi --query-gpu=name,memory.total,driver_version --format=csv
+import psutil, shutil, sys, torch
+print(f"RAM {psutil.virtual_memory().total / 1e9:.0f} GB | disk free {shutil.disk_usage('/content').free / 1e9:.0f} GB")
+print("python", sys.version.split()[0], "| Colab's torch", torch.__version__, "CUDA", torch.version.cuda)</code></pre>
+    With driver 580 or newer, use PyTorch 2.10 with CUDA 13, WanGP's recommended stack. With an older driver, use PyTorch 2.7.1 with CUDA 12.8, its other documented stack. Expect about 53 GB of RAM and 236 GB of disk (2024 figures for the L4 runtime).<span class="tag">5 min · 0.15 units</span></div>
+    <div class="step" id="step-install"><b>Install WanGP in its own Python 3.11.</b> WanGP recommends Python 3.11. It also warns against PyTorch 2.8 (RAM leaks) and 2.9 (VAE memory blows up), so don't reuse Colab's preinstalled torch:
+<pre><code>%%bash
+set -e
+cd /content
+git clone -q https://github.com/deepbeepmeep/Wan2GP.git &amp;&amp; cd Wan2GP
+git checkout -q 9e25e36e50                  # WanGP on 3 Nov 2026: record the commit you run
+pip install -q uv
+uv venv -q --seed -p 3.11 /content/wangp    # its own Python, not Colab's
+source /content/wangp/bin/activate
+# driver 580+: torch 2.10 + CUDA 13; older driver: torch 2.7.1 from the cu128 index instead
+pip install -q torch==2.10.0 torchvision==0.25.0 torchaudio==2.10.0 --index-url https://download.pytorch.org/whl/cu130
+pip install -q -r requirements.txt</code></pre>
+    WanGP's <code>requirements.txt</code> pulls an onnxruntime nightly from a separate package feed. AIQuest skipped it because it was missing from PyPI. If it fails here, install the subset his notebook uses for the H3 path (<code>mmgp</code>, <code>comfy-kitchen 0.2.35</code>, <code>transformers 4.54.0</code>, <code>diffusers 0.36.0</code>, <code>gguf</code>, <code>optimum-quanto</code>, <code>gradio 5.29.0</code>).<span class="tag">15–20 min · 0.5 units</span></div>
+    <div class="step" id="step-launch"><b>Keep outputs on Drive, then launch.</b> WanGP saves to <code>outputs/</code> and writes each clip's settings into the file's metadata, so point that folder at Drive:
+<pre><code>from google.colab import drive, output
+import os, subprocess
+drive.mount("/content/drive")
+out = "/content/drive/MyDrive/video-gen/colab-outputs"
+os.makedirs(out, exist_ok=True)
+if not os.path.exists("/content/Wan2GP/outputs"):
+    os.symlink(out, "/content/Wan2GP/outputs")
+log = open("/content/wangp.log", "w")
+subprocess.Popen(["/content/wangp/bin/python", "wgp.py", "--server-port", "7860", "--profile", "4"],
+                 cwd="/content/Wan2GP", stdout=log, stderr=subprocess.STDOUT)
+# when the log says it is running:
+output.serve_kernel_port_as_window(7860)</code></pre>
+    Colab's port proxy opens the UI only in your signed-in browser. If the UI misbehaves through it, relaunch with <code>--share --auth</code> for a Gradio link protected by a password.<span class="tag">5 min</span></div>
+    <div class="step" id="step-load"><b>Load H3 and let it download.</b> Pick MiniMax H3 FL2VA, pruned 20B INT8, in the model list. WanGP fetches the weights the first time you use the model, which should be in the region of the notebook's 40–55 GB. Colab wipes the disk when the runtime ends, so this repeats every session.<span class="tag">10–20 min · 0.5 units</span></div>
+    <div class="step" id="step-runs"><b>Run R1–R4 below at one fixed seed.</b> The Mara brief from s00 2.6 through three of WanGP's speed profiles, then the 2K regenerate on the best one. Note wall time and units per clip.<span class="tag">75 min · 2.2 units</span></div>
+    <div class="step" id="step-record"><b>Record, then stop the runtime.</b> Write one <code>record.json</code> per clip on Drive: brief, profile, steps, seed, resolution, wall time, units and WanGP commit. Add the s00 rubric scores and one line per run in <code>ai_specs/s01_first-test.md</code>. Then Runtime → Disconnect and delete runtime; units stop when the VM does.<span class="tag">10 min</span></div>
+  </div>
+
+  <h3>Test runs</h3>
+  <div class="tablewrap"><table class="runs stackable">
+    <thead><tr><th>Run</th><th>What</th><th>Settings</th><th>What to check</th></tr></thead>
+    <tbody>
+      <tr id="run-r1"><td>R1</td><td data-label="What">Mara brief (s00 2.6), text to video with audio</td><td data-label="Settings">480p 16:9, 8 s, seed S, WanGP's FL2V accelerator (v1.3)</td><td data-label="What to check">The cut at 4.5 s is a real cut; the line is clear and lip-synced</td></tr>
+      <tr id="run-r2"><td>R2</td><td data-label="What">Same prompt and seed</td><td data-label="Settings">Pika H3 Flex, 6 steps</td><td data-label="What to check">Same checks; whether the extra steps show</td></tr>
+      <tr id="run-r3"><td>R3</td><td data-label="What">Same prompt and seed</td><td data-label="Settings">TaoMate FL2VA, 3 steps</td><td data-label="What to check">Same checks; what 3 steps give up</td></tr>
+      <tr id="run-r4"><td>R4</td><td data-label="What">Best of R1–R3, regenerated</td><td data-label="Settings">H3 Regenerate 2K 2 Phases at 720p, then 1080p; 2K only if 1080p fit</td><td data-label="What to check">The soundtrack survives; her face holds in the wide shot</td></tr>
+      <tr id="run-r5"><td>R5 · optional</td><td data-label="What">Ref2VA with a voice clip you have rights to</td><td data-label="Settings">480p, 5 s, a reference sheet of an original character</td><td data-label="What to check">The voice's timbre carries; no real person's likeness</td></tr>
+    </tbody>
+  </table></div>
+  <p class="cite">PDMD, DMAD and the fused turbo aren't on WanGP's list of speed profiles, so s00's four arms become WanGP's own. PDMD can come back as a custom LoRA if you want the notebook's exact preview.</p>
+</section>
+
+<section id="delta">
+  <span class="eyebrow">4 · Against s00</span>
+  <h2>What changes from s00's first test</h2>
+  <div class="tablewrap"><table class="delta stackable">
+    <thead><tr><th></th><th>s00 section 7 (Kaggle)</th><th>This plan (Colab L4)</th></tr></thead>
+    <tbody>
+      <tr><td>Where</td><td data-label="s00 (Kaggle)">Kaggle, 2 × T4, free, queued</td><td data-label="This plan">Colab, 1 × L4, about $0.17 an hour, no queue (but L4s are "subject to availability")</td></tr>
+      <tr><td>Software</td><td data-label="s00 (Kaggle)">AIQuest's H3 Turbo notebook</td><td data-label="This plan">WanGP, pinned to a commit you record</td></tr>
+      <tr><td>Speed arms</td><td data-label="s00 (Kaggle)">PDMD, DMAD, fused, official 8-step</td><td data-label="This plan">WanGP's FL2V accelerator, Pika 6-step, TaoMate 3-step</td></tr>
+      <tr><td>Upscale</td><td data-label="s00 (Kaggle)">one 720p render</td><td data-label="This plan">Regenerate 2K at 720p and 1080p</td></tr>
+      <tr><td>Records</td><td data-label="s00 (Kaggle)"><code>record.json</code> in <code>outputs/</code></td><td data-label="This plan"><code>record.json</code> on Drive, imported later: the central MLflow is on your Mac, which Colab can't reach</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="risks">
+  <span class="eyebrow">5 · Risks</span>
+  <h2>What could make this plan wrong</h2>
+  <div class="cards">
+    <div class="card"><h3>The install on Colab <span class="badge warn">most likely</span></h3><p>Colab's Python and NVIDIA driver may not match WanGP's recommended stack. The probe in step 2 decides which stack to use, and the separate Python keeps Colab's own packages out of it. If the full requirements won't install, use the H3 subset.</p></div>
+    <div class="card"><h3>Memory at 1080p and 2K</h3><p>53 GB of RAM is a 2024 figure. On Linux, WanGP pins up to 60% of RAM by default. The 2K pass peaked at about 32 GB of VRAM in a ComfyUI test on a 5090. WanGP spills to RAM instead of crashing, but slowly. Start with 5–8 s clips at 720p and 1080p, and use <code>--max-ram</code> if Colab kills the runtime for memory.</p></div>
+    <div class="card"><h3>Sessions end and take the disk</h3><p>Paid sessions run for at most 12 hours and time out when idle; Colab doesn't publish the idle limit. Weights re-download each session (10–20 min, about 0.5 units). Buying more Drive space doesn't enlarge the VM's disk, so keep only outputs on Drive.</p></div>
+    <div class="card"><h3>L4s are not guaranteed</h3><p>Colab sells premium GPUs "subject to availability", even to paid users. There's no thousand-place queue, but some days the L4 may be missing. Then an A100 (40 GB) is the fallback, at about 5.4 units an hour.</p></div>
+    <div class="card"><h3>Speed is unmeasured</h3><p>On paper an L4 has about twice one T4's compute, but the notebook uses two T4s at once and WanGP streams weights. Expect Kaggle-like times, not faster ones, until session 1 measures them.</p></div>
+    <div class="card"><h3>Colab's rules</h3><p>Every runtime bans deepfakes and connecting through remote proxies. Without units, Colab also bans working mainly through a web UI. Colab's own port proxy (step 4) keeps the UI private, with no public link.</p></div>
+  </div>
+</section>
+
+<section id="decisions">
+  <span class="eyebrow">6 · Decisions</span>
+  <h2>Three things to settle before I write the notebook</h2>
+  <p class="sub">Each question queues one answer; press Send to Agent when you're done, or use the copy button at the bottom if you opened this file directly.</p>
+  <div class="qgrid">
+    <div class="card">
+      <form class="q-form" data-lavish-question="route" onsubmit="event.preventDefault(); const fd=new FormData(event.currentTarget); const a=fd.get('route'); const n=fd.get('route_note')||''; if(!a) return; window.lavish&&window.lavish.queuePrompt('s01 D1 route on the Colab L4: '+a+(n?' — '+n:'')+'. Update s01 to match and remove the routes not taken from the decision list.',{tag:'choice',text:'D1 route: '+a,element:event.currentTarget,data:{question:'route',answer:a,note:n}}); event.currentTarget.querySelector('.queued').textContent='queued: '+a;">
+        <h3>D1 · Which route onto the L4?</h3>
+        <label><input type="radio" name="route" value="B: run WanGP itself"> B · Run WanGP itself (recommended)</label>
+        <label><input type="radio" name="route" value="A: port AIQuest's engine to one GPU"> A · Port AIQuest's engine</label>
+        <label><input type="radio" name="route" value="C: ComfyUI on Colab"> C · ComfyUI on Colab</label>
+        <input type="text" name="route_note" placeholder="note (optional)">
+        <div class="row"><button class="btn btn-sm" type="submit">Queue answer</button><span class="queued"></span></div>
+      </form>
+    </div>
+    <div class="card">
+      <form class="q-form" data-lavish-question="paying" onsubmit="event.preventDefault(); const fd=new FormData(event.currentTarget); const a=fd.get('pay'); const n=fd.get('pay_note')||''; if(!a) return; window.lavish&&window.lavish.queuePrompt('s01 D2 paying for Colab: '+a+(n?' — '+n:'')+'. Reflect it in step 1 and the cost lines.',{tag:'choice',text:'D2 paying: '+a,element:event.currentTarget,data:{question:'paying',answer:a,note:n}}); event.currentTarget.querySelector('.queued').textContent='queued: '+a;">
+        <h3>D2 · How will you pay for Colab?</h3>
+        <label><input type="radio" name="pay" value="Pay As You Go, 100 units for $9.99"> Pay As You Go, 100 units for $9.99 (recommended)</label>
+        <label><input type="radio" name="pay" value="Colab Pro subscription"> Colab Pro subscription</label>
+        <label><input type="radio" name="pay" value="I have Google AI Pro: check whether it includes Colab units first"> I have Google AI Pro: check whether it includes Colab units first</label>
+        <input type="text" name="pay_note" placeholder="note (optional)">
+        <div class="row"><button class="btn btn-sm" type="submit">Queue answer</button><span class="queued"></span></div>
+      </form>
+    </div>
+    <div class="card">
+      <form class="q-form" data-lavish-question="next" onsubmit="event.preventDefault(); const fd=new FormData(event.currentTarget); const a=fd.get('next'); const n=fd.get('next_note')||''; if(!a) return; window.lavish&&window.lavish.queuePrompt('s01 D3 next step: '+a+(n?' — '+n:'')+'.',{tag:'choice',text:'D3 next: '+a,element:event.currentTarget,data:{question:'next',answer:a,note:n}}); event.currentTarget.querySelector('.queued').textContent='queued: '+a;">
+        <h3>D3 · What should I build next?</h3>
+        <label><input type="radio" name="next" value="Write the Colab notebook (probe, install, launch, save to Drive, record.json) into the repo as notebooks/s01_h3_colab_l4.ipynb"> Write the Colab notebook into the repo (recommended)</label>
+        <label><input type="radio" name="next" value="Nothing yet: I'll run the steps by hand first and report back"> Nothing yet: I'll run the steps by hand first</label>
+        <input type="text" name="next_note" placeholder="note (optional)">
+        <div class="row"><button class="btn btn-sm" type="submit">Queue answer</button><span class="queued"></span></div>
+      </form>
+    </div>
+  </div>
+  <div class="copyrow">
+    <button type="button" class="btn btn-sm" onclick="(async (btn) => {
+      const copyRun = btn._lavishCopyRun = (btn._lavishCopyRun || 0) + 1;
+      const qs = [...document.querySelectorAll('[data-lavish-question]')];
+      const status = btn.parentElement.querySelector('[data-lavish-copy-all-status]');
+      btn.parentElement.querySelector('[data-lavish-copy-all-manual]')?.remove();
+      const out = [];
+      for (const q of qs) {
+        const key = q.getAttribute('data-lavish-question')?.trim() || 'Question';
+        const lines = [];
+        for (const el of q.querySelectorAll('input, select, textarea')) {
+          if (el.matches(':disabled')) continue;
+          if (el.closest('[data-lavish-question]') !== q) continue;
+          const isChoice = el.matches('input[type=checkbox], input[type=radio]');
+          if (isChoice &amp;&amp; !el.checked) continue;
+          if (el.matches('input[type=button], input[type=submit], input[type=reset], input[type=image], input[type=hidden], input[type=file], input[type=range], input[type=color]')) continue;
+          let vals;
+          if (el instanceof HTMLSelectElement) {
+            vals = [...el.selectedOptions].filter((o) => !o.disabled &amp;&amp; !o.closest('optgroup[disabled]')).map((o) => o.value.trim()).filter(Boolean);
+          } else {
+            const v = isChoice &amp;&amp; (!el.hasAttribute('value') || !el.value.trim())
+              ? el.labels?.[0]?.textContent?.trim() || el.getAttribute('aria-label')?.trim() || el.name || ''
+              : el.value.trim();
+            vals = v ? [v] : [];
+          }
+          const label = el.name || el.labels?.[0]?.textContent?.trim() || el.getAttribute('aria-label')?.trim() || el.getAttribute('placeholder')?.trim() || el.tagName.toLowerCase();
+          for (const v of vals) lines.push('  ' + label + ': ' + v.split('\n').join('\n    '));
+        }
+        if (lines.length) out.push(key + ':\n' + lines.join('\n'));
+      }
+      const text = out.join('\n\n');
+      if (!text) {
+        status.textContent = qs.length ? 'No answers to copy yet.' : 'No questions or answers to copy.';
+        return;
+      }
+      status.textContent = '';
+      try {
+        if (typeof navigator.clipboard?.writeText !== 'function') throw new Error('Clipboard API unavailable');
+        await navigator.clipboard.writeText(text);
+        if (copyRun !== btn._lavishCopyRun) return;
+        status.textContent = 'Answers copied.';
+        return;
+      } catch {}
+      if (copyRun !== btn._lavishCopyRun) return;
+      const tmp = document.createElement('textarea');
+      tmp.value = text;
+      tmp.readOnly = true;
+      tmp.setAttribute('aria-hidden', 'true');
+      tmp.style.position = 'fixed';
+      tmp.style.left = '-10000px';
+      document.body.append(tmp);
+      tmp.focus();
+      tmp.select();
+      let ok = false;
+      try {
+        ok = document.execCommand('copy');
+      } catch {}
+      tmp.remove();
+      if (ok) {
+        status.textContent = 'Answers copied.';
+        return;
+      }
+      btn.parentElement.querySelector('[data-lavish-copy-all-manual]')?.remove();
+      const man = document.createElement('textarea');
+      man.value = text;
+      man.readOnly = true;
+      man.rows = Math.min(12, Math.max(3, text.split('\n').length));
+      man.setAttribute('aria-label', 'Answers to copy manually');
+      man.dataset.lavishCopyAllManual = '';
+      btn.insertAdjacentElement('afterend', man);
+      man.focus();
+      man.select();
+      status.textContent = 'Clipboard unavailable. Copy the answers below manually.';
+    })(this)">Copy all answers</button>
+    <span data-lavish-copy-all-status role="status" aria-live="polite"></span>
+  </div>
+</section>
+
+<section id="sources">
+  <span class="eyebrow">Sources</span>
+  <h2>Where each claim comes from (read 4 Nov 2026)</h2>
+  <ul class="src">
+    <li>The notebook: github.com/TeamAIQ/Colab-notebooks <code>kaggle_notebooks/minimax-h3-open-h3-regenerate-2k.ipynb</code> (added 29 Oct 2026) and its README entry; the cells were read as text, not run</li>
+    <li>WanGP: github.com/deepbeepmeep/Wan2GP README (v18.888 notes of 29 Oct; MMGP v4 notes of 7 Oct), <code>docs/INSTALLATION.md</code>, <code>docs/CLI.md</code>, <code>shared/cli_args.py</code> and the defaults in <code>wgp.py</code>; commits <code>2efcb4481e</code> “fix regenerate 2k” and <code>a504252ea2</code> “H3 regenerate audio fix” (29–30 Oct); HEAD <code>9e25e36e50</code> (3 Nov)</li>
+    <li>Open-H3-Regenerate-2K: nvlabs.github.io/Sana/Open-H3-Regenerate-2K · huggingface.co/Efficient-Large-Model/Open-H3-Regenerate-2K · comfyui-wiki.com news 2026-10-27 · ai-muninn.com “MiniMax-H3 on RTX 5090, part 14” (VRAM peaks, timings)</li>
+    <li>Colab rules and limits: research.google.com/colaboratory/faq.html (restricted activities, 12-hour paid sessions, disk not enlarged by Drive)</li>
+    <li>Colab units per hour: mccormickml.com “Colab GPUs Features &amp; Pricing” (updated March 2026: L4 1.71, A100 40 GB 5.40, T4 1.19; L4 22.5 GB usable)</li>
+    <li>L4 runtime RAM and disk (2024): varlog-info.pages.dev Colab consumption comparison; Pay As You Go price and 90-day expiry as quoted by gpuperhour.com. Confirm both in the probe and at checkout</li>
+  </ul>
+</section>
+</main>
+</body>
+</html>
