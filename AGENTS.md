@@ -96,7 +96,7 @@ it, copy it, or write it fresh.
 - **`../ConvFinQA-agent`**: the single model-call module pattern and MLflow
   tracking helpers.
 - **`../tau-telecom-sft`**: running open models on rented GPUs (Modal), with
-  its skill notes under `.claude/skills/modal/`.
+  its skill notes under `.agents/skills/modal/`.
 
 ## Expected layout
 
